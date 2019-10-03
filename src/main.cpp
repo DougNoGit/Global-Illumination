@@ -71,6 +71,9 @@ public:
 	// Shape to be used (from  file) - modify to support multiple
 	shared_ptr<Shape> sphere;
 
+	// hand
+	shared_ptr<Shape> hand;
+
 	// Two part path
     Spline splinepath[2];
 
@@ -145,6 +148,20 @@ public:
 			sphere->measure();
 			sphere->init();
 		}
+
+		bool rd = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/hand_low_quality.obj").c_str());
+		if (!rd) {
+			cerr << errStr << endl;
+		} else {
+			hand = make_shared<Shape>();
+			hand->createShape(TOshapes[0]);
+			hand->measure();
+			hand->init();
+		}
+
+
+
+
 		//read out information stored in the shape about its size - something like this...
 		//then do something with that information.....
 		gMin.x = sphere->min.x;
@@ -208,6 +225,8 @@ public:
 				position = splinepath[1].getPosition();
 			}
 
+			static float angle = 0;
+			angle += 0.01;
             // draw mesh
             Model->pushMatrix();
             Model->loadIdentity();
@@ -215,8 +234,9 @@ public:
             Model->translate(position);
                 Model->pushMatrix();
                 Model->scale(vec3(0.5,0.5,0.5));
+				Model->rotate(angle, vec3(1, 1, 1));
                 glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                sphere->draw(simple);
+                hand->draw(simple);
                 Model->popMatrix();
             Model->popMatrix();
         simple->unbind();
