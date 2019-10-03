@@ -72,7 +72,7 @@ public:
 	shared_ptr<Shape> sphere;
 
 	// hand
-	shared_ptr<Shape> hand;
+	vector<shared_ptr<Shape>> hand;
 
 	// spider
 	vector<shared_ptr<Shape>> spider;
@@ -132,65 +132,46 @@ public:
 		shaderManager = new ShaderManager(resourceDirectory);
 	}
 
-	void initGeom(const std::string& resourceDirectory)
+	void loadMultiPartObject(const std::string& resource, vector<shared_ptr<Shape>>* object)
 	{
-		//EXAMPLE new set up to read one shape from one obj file - convert to read several
 		// Initialize mesh
 		// Load geometry
  		// Some obj files contain material information.We'll ignore them for this assignment.
  		vector<tinyobj::shape_t> TOshapes;
  		vector<tinyobj::material_t> objMaterials;
  		string errStr;
+		shared_ptr<Shape> s;
 		//load in the mesh and make the shape(s)
- 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/SmoothSphere.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			sphere = make_shared<Shape>();
-			sphere->createShape(TOshapes[0]);
-			sphere->measure();
-			sphere->init();
-		}
-
-		// reduce, reuse, recycle
-		rc = false;
-		TOshapes.clear();
-		objMaterials.clear();
-
-		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/spider_low_quality.obj").c_str());
-		shared_ptr<Shape> spiderpart;
+ 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resource).c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
 			for(int i = 0; i < TOshapes.size(); i++)
 			{
-				spiderpart = make_shared<Shape>();
-				spiderpart->createShape(TOshapes[i]);
-				spiderpart->measure();
-				spiderpart->init();
-				spider.push_back(spiderpart);
+				s = make_shared<Shape>();
+				s->createShape(TOshapes[i]);
+				s->measure();
+				s->init();
+				object->push_back(s);
 			}
 		}
+	}
 
-		// reduce, reuse, recycle
-		rc = false;
-		TOshapes.clear();
-		objMaterials.clear();
+	void drawMultiPartObject(vector<shared_ptr<Shape>>* object, shared_ptr<Program>* program)
+	{
+		for(int i = 0; i < object->size(); i++) 
+			(*object)[i]->draw(*program);
+	}
 
-		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/hand_low_quality.obj").c_str());
-		if (!rc) {
-			cerr << errStr << endl;
-		} else {
-			hand = make_shared<Shape>();
-			hand->createShape(TOshapes[0]);
-			hand->measure();
-			hand->init();
-		}
-
+	void initGeom(const std::string& resourceDirectory)
+	{
+		loadMultiPartObject(resourceDirectory + "/models/hand_low_quality.obj", &hand);
+		loadMultiPartObject(resourceDirectory + "/models/spider_low_quality.obj", &spider);
+		
 		//read out information stored in the shape about its size - something like this...
 		//then do something with that information.....
-		gMin.x = sphere->min.x;
-		gMin.y = sphere->min.y;
+		//gMin.x = sphere->min.x;
+		//gMin.y = sphere->min.y;
 
 		// init splines
 		splinepath[0] = Spline(glm::vec3(-6,0,-5), glm::vec3(-1,-5,-5), glm::vec3(1, 5, -5), glm::vec3(2,0,-5), 5);
@@ -261,9 +242,8 @@ public:
                 Model->scale(vec3(0.5,0.5,0.5));
 				Model->rotate(angle, vec3(1, 1, 1));
                 glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-				for(int i = 0; i < spider.size(); i++)
-					spider[i]->draw(simple);
-				hand->draw(simple);
+				drawMultiPartObject(&spider, &simple);
+				drawMultiPartObject(&hand, &simple);
                 Model->popMatrix();
             Model->popMatrix();
         simple->unbind();
