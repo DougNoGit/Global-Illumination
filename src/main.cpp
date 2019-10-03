@@ -74,6 +74,9 @@ public:
 	// hand
 	shared_ptr<Shape> hand;
 
+	// spider
+	vector<shared_ptr<Shape>> spider;
+
 	// Two part path
     Spline splinepath[2];
 
@@ -149,8 +152,33 @@ public:
 			sphere->init();
 		}
 
-		bool rd = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/hand_low_quality.obj").c_str());
-		if (!rd) {
+		// reduce, reuse, recycle
+		rc = false;
+		TOshapes.clear();
+		objMaterials.clear();
+
+		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/spider_low_quality.obj").c_str());
+		shared_ptr<Shape> spiderpart;
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			for(int i = 0; i < TOshapes.size(); i++)
+			{
+				spiderpart = make_shared<Shape>();
+				spiderpart->createShape(TOshapes[i]);
+				spiderpart->measure();
+				spiderpart->init();
+				spider.push_back(spiderpart);
+			}
+		}
+
+		// reduce, reuse, recycle
+		rc = false;
+		TOshapes.clear();
+		objMaterials.clear();
+
+		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/hand_low_quality.obj").c_str());
+		if (!rc) {
 			cerr << errStr << endl;
 		} else {
 			hand = make_shared<Shape>();
@@ -158,9 +186,6 @@ public:
 			hand->measure();
 			hand->init();
 		}
-
-
-
 
 		//read out information stored in the shape about its size - something like this...
 		//then do something with that information.....
@@ -236,7 +261,9 @@ public:
                 Model->scale(vec3(0.5,0.5,0.5));
 				Model->rotate(angle, vec3(1, 1, 1));
                 glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                hand->draw(simple);
+				for(int i = 0; i < spider.size(); i++)
+					spider[i]->draw(simple);
+				hand->draw(simple);
                 Model->popMatrix();
             Model->popMatrix();
         simple->unbind();
