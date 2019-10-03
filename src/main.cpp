@@ -214,7 +214,7 @@ public:
             //"global" translate
             Model->translate(position);
                 Model->pushMatrix();
-                Model->scale(vec3(0.5, 0.5, 0.5));
+                Model->scale(vec3(0.5,0.5,0.5));
                 glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
                 sphere->draw(simple);
                 Model->popMatrix();
