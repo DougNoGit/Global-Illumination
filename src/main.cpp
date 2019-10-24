@@ -69,7 +69,7 @@ public:
     ShaderManager * shaderManager;
 
 	// Shape to be used (from  file) - modify to support multiple
-	shared_ptr<Shape> sphere;
+	shared_ptr<Shape> bunny;
 
 	// Two part path
     Spline splinepath[2];
@@ -126,6 +126,37 @@ public:
 		shaderManager = new ShaderManager(resourceDirectory);
 	}
 
+	void loadMultiPartObject(const std::string& resource, vector<shared_ptr<Shape>>* object)
+	{
+		// Initialize mesh
+		// Load geometry
+ 		// Some obj files contain material information.We'll ignore them for this assignment.
+ 		vector<tinyobj::shape_t> TOshapes;
+ 		vector<tinyobj::material_t> objMaterials;
+ 		string errStr;
+		shared_ptr<Shape> s;
+		//load in the mesh and make the shape(s)
+ 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resource).c_str());
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			for(int i = 0; i < TOshapes.size(); i++)
+			{
+				s = make_shared<Shape>();
+				s->createShape(TOshapes[i]);
+				s->measure();
+				s->init();
+				object->push_back(s);
+			}
+		}
+	}
+
+	void drawMultiPartObject(vector<shared_ptr<Shape>>* object, shared_ptr<Program>* program)
+	{
+		for(int i = 0; i < object->size(); i++) 
+			(*object)[i]->draw(*program);
+	}
+
 	void initGeom(const std::string& resourceDirectory)
 	{
 		//EXAMPLE new set up to read one shape from one obj file - convert to read several
@@ -136,19 +167,19 @@ public:
  		vector<tinyobj::material_t> objMaterials;
  		string errStr;
 		//load in the mesh and make the shape(s)
- 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/SmoothSphere.obj").c_str());
+ 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/bunny.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
-			sphere = make_shared<Shape>();
-			sphere->createShape(TOshapes[0]);
-			sphere->measure();
-			sphere->init();
+			bunny = make_shared<Shape>();
+			bunny->createShape(TOshapes[0]);
+			bunny->measure();
+			bunny->init();
 		}
 		//read out information stored in the shape about its size - something like this...
 		//then do something with that information.....
-		gMin.x = sphere->min.x;
-		gMin.y = sphere->min.y;
+		gMin.x = bunny->min.x;
+		gMin.y = bunny->min.y;
 
 		// init splines
 		splinepath[0] = Spline(glm::vec3(-6,0,-5), glm::vec3(-1,-5,-5), glm::vec3(1, 5, -5), glm::vec3(2,0,-5), 5);
@@ -216,7 +247,7 @@ public:
                 Model->pushMatrix();
                 Model->scale(vec3(0.5, 0.5, 0.5));
                 glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                sphere->draw(simple);
+                bunny->draw(simple);
                 Model->popMatrix();
             Model->popMatrix();
         simple->unbind();

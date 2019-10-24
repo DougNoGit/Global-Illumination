@@ -35,7 +35,7 @@ if(GLFW_DIR)
     add_subdirectory(${GLFW_DIR} ${GLFW_DIR}/debug)
   endif()
 
-  include_directories(${GLFW_DIR}/include)
+  include_directories(${GLFW_DIR})
   target_link_libraries(${CMAKE_PROJECT_NAME} glfw ${GLFW_LIBRARIES})
 else()
   message(STATUS "GLFW environment variable `GLFW_DIR` not found, GLFW3 must be installed with the system")
