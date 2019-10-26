@@ -48,6 +48,7 @@
 #include "WindowManager.h"
 #include "ShaderManager.h"
 #include "Spline.h"
+#include "Camera.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader/tiny_obj_loader.h>
@@ -68,8 +69,12 @@ public:
     
     ShaderManager * shaderManager;
 
+	Camera camera = Camera();
+
 	// Shape to be used (from  file) - modify to support multiple
 	shared_ptr<Shape> bunny;
+	shared_ptr<Shape> cube;
+	
 
 	// Two part path
     Spline splinepath[2];
@@ -181,9 +186,20 @@ public:
 		gMin.x = bunny->min.x;
 		gMin.y = bunny->min.y;
 
-		// init splines
-		splinepath[0] = Spline(glm::vec3(-6,0,-5), glm::vec3(-1,-5,-5), glm::vec3(1, 5, -5), glm::vec3(2,0,-5), 5);
-		splinepath[1] = Spline(glm::vec3(2,0,-5), glm::vec3(3,-5,-5), glm::vec3(-0.25, 0.25, -5), glm::vec3(0,0,-5), 5);
+		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/cube.obj").c_str());
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			cube = make_shared<Shape>();
+			cube->createShape(TOshapes[0]);
+			cube->measure();
+			cube->init();
+		}
+		//read out information stored in the shape about its size - something like this...
+		//then do something with that information.....
+		gMin.x = cube->min.x;
+		gMin.y = cube->min.y;
+	
 	
 	}
     
@@ -196,9 +212,10 @@ public:
         return Projection;
     }
     
-    void SetViewMatrix(shared_ptr<Program> curShader) {
+    void SetViewMatrix(shared_ptr<Program> curShader, vec3 lookat) {
         auto View = make_shared<MatrixStack>();
         View->pushMatrix();
+		View->lookAt(vec3(0), lookat, vec3(0,1,0));
         glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
         View->popMatrix();
     }
@@ -218,6 +235,8 @@ public:
 	}
     
     void renderSimpleProg(float frametime) {
+
+		vec3 bunnyPos = vec3(4,-6,-4);
         shared_ptr<Program> simple = shaderManager->getCurrentShader();
 
         auto Model = make_shared<MatrixStack>();
@@ -225,30 +244,58 @@ public:
         simple->bind();
             // Apply perspective projection.
             SetProjectionMatrix(simple);
-            SetViewMatrix(simple);
-
-			// Demo of Bezier Spline
-			glm::vec3 position;
-
-			if(!splinepath[0].isDone())
-			{
-				splinepath[0].update(frametime);
-				position = splinepath[0].getPosition();
-			} else {
-				splinepath[1].update(frametime);
-				position = splinepath[1].getPosition();
-			}
+            SetViewMatrix(simple, bunnyPos);
 
             // draw mesh
             Model->pushMatrix();
             Model->loadIdentity();
             //"global" translate
-            Model->translate(position);
+            Model->translate(bunnyPos);
+				// draw bunny
                 Model->pushMatrix();
-                Model->scale(vec3(0.5, 0.5, 0.5));
+                Model->scale(vec3(2));
                 glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
                 bunny->draw(simple);
                 Model->popMatrix();
+				
+				// draw cubes around the bunny
+				Model->pushMatrix();
+				Model->translate(vec3(0,-2,0));	
+				Model->scale(vec3(4));
+				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+                cube->draw(simple);
+				Model->popMatrix();				
+				
+				Model->pushMatrix();
+				Model->translate(vec3(0,2,-4));	
+				Model->scale(vec3(4));
+				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+                cube->draw(simple);
+				Model->popMatrix();
+
+				Model->pushMatrix();
+				Model->translate(vec3(4,2,0));				
+				Model->scale(vec3(4));
+				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+                cube->draw(simple);
+				Model->popMatrix();
+
+				Model->pushMatrix();
+				Model->translate(vec3(0,-2,-4));	
+				Model->scale(vec3(4));
+				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+                cube->draw(simple);
+				Model->popMatrix();
+
+				Model->pushMatrix();
+				Model->translate(vec3(4,-2,0));				
+				Model->scale(vec3(4));
+				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+                cube->draw(simple);
+				Model->popMatrix();
+
+
+
             Model->popMatrix();
         simple->unbind();
     }
