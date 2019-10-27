@@ -24,15 +24,16 @@
 #include "ShaderManager.h"
 
 void ShaderManager::initShaders() {
-    shaderMap[SIMPLEPROG] = initSimpleProgShader();
+    shaderMap[VPLPROG] = initVPLProgShader();
+    shaderMap[RENDERPROG] = initRenderShader();
 }
 
-shared_ptr<Program> ShaderManager::initSimpleProgShader() {
+shared_ptr<Program> ShaderManager::initVPLProgShader() {
 //    // Initialize the GLSL program.
     std::shared_ptr<Program> prog = make_shared<Program>();
     
     prog->setVerbose(true);
-    prog->setShaderNames(resourceDirectory + "/shaders/simple_vert.glsl", resourceDirectory + "/shaders/simple_frag.glsl");
+    prog->setShaderNames(resourceDirectory + "/shaders/vpl_vert.glsl", resourceDirectory + "/shaders/vpl_frag.glsl");
     
     if (!prog->init())
     {
@@ -43,6 +44,34 @@ shared_ptr<Program> ShaderManager::initSimpleProgShader() {
     prog->addUniform("P");
     prog->addUniform("V");
     prog->addUniform("M");
+    prog->addUniform("baseColor");
+    prog->addUniform("lightPos");
+    prog->addAttribute("vertPos");
+    prog->addAttribute("vertNor");
+    
+    return prog;
+}
+
+shared_ptr<Program> ShaderManager::initRenderShader() {
+//    // Initialize the GLSL program.
+    std::shared_ptr<Program> prog = make_shared<Program>();
+    
+    prog->setVerbose(true);
+    prog->setShaderNames(resourceDirectory + "/shaders/render_vert.glsl", resourceDirectory + "/shaders/render_frag.glsl");
+    
+    if (!prog->init())
+    {
+        cerr << "One or more shaders failed to compile... exiting!" << endl;
+        exit(1);
+    }
+    
+    prog->addUniform("P");
+    prog->addUniform("V");
+    prog->addUniform("M");
+    prog->addUniform("VPLpositions");
+    prog->addUniform("VPLcolors");
+    prog->addUniform("VPLresolution");
+    prog->addUniform("baseColor");
     prog->addAttribute("vertPos");
     prog->addAttribute("vertNor");
     

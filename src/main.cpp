@@ -19,7 +19,7 @@
  2) To retrieve the current shader, call shaderManager.getCurrentShader()
  3) Use the return value of getCurrentShader() to render
  ***********************/
- 
+
 /***********************
  SPLINE INSTRUCTIONS
 
@@ -37,6 +37,8 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is. 
  ***********************/
 
+#define VPLRESOLUTION 256
+
 #include <chrono>
 #include <iostream>
 #include <glad/glad.h>
@@ -47,6 +49,7 @@
 #include "MatrixStack.h"
 #include "WindowManager.h"
 #include "ShaderManager.h"
+#include "GLTextureWriter.h"
 #include "Spline.h"
 #include "Camera.h"
 
@@ -64,26 +67,33 @@ class Application : public EventCallbacks
 {
 
 public:
+	// for debugging
+	bool FirstTime = true;
 
-	WindowManager * windowManager = nullptr;
-    
-    ShaderManager * shaderManager;
+	WindowManager *windowManager = nullptr;
+
+	ShaderManager *shaderManager;
 
 	Camera camera = Camera();
 
 	// Shape to be used (from  file) - modify to support multiple
 	shared_ptr<Shape> bunny;
+	vec3 bunnyBaseColor = vec3(1,0.5,0.5);
 	shared_ptr<Shape> cube;
-	
+	vec3 cubeBaseColor = vec3(1,1,1);
 
 	// Two part path
-    Spline splinepath[2];
+	Spline splinepath[2];
 
 	// Contains vertex information for OpenGL
 	GLuint VertexArrayID;
 
 	// Data necessary to give our triangle to OpenGL
 	GLuint VertexBufferID;
+
+	// Set up VPL buffer object
+	GLuint VPLbuffer, depthBuf;
+	GLuint VPLpositions, VPLcolors;
 
 	//example data that might be useful when trying to compute bounds on multi-shape
 	vec3 gMin;
@@ -94,11 +104,45 @@ public:
 		{
 			glfwSetWindowShouldClose(window, GL_TRUE);
 		}
-		if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
-			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+		if (key == GLFW_KEY_Z && action == GLFW_PRESS)
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		}
-		if (key == GLFW_KEY_Z && action == GLFW_RELEASE) {
-			glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+		if (key == GLFW_KEY_Z && action == GLFW_RELEASE)
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+		if (key == GLFW_KEY_W && action == GLFW_PRESS)
+		{
+			camera.w = true;
+		}
+		if (key == GLFW_KEY_W && action == GLFW_RELEASE)
+		{
+			camera.w = false;
+		}
+		if (key == GLFW_KEY_S && action == GLFW_PRESS)
+		{
+			camera.s = true;
+		}
+		if (key == GLFW_KEY_S && action == GLFW_RELEASE)
+		{
+			camera.s = false;
+		}
+		if (key == GLFW_KEY_A && action == GLFW_PRESS)
+		{
+			camera.a = true;
+		}
+		if (key == GLFW_KEY_A && action == GLFW_RELEASE)
+		{
+			camera.a = false;
+		}
+		if (key == GLFW_KEY_D && action == GLFW_PRESS)
+		{
+			camera.d = true;
+		}
+		if (key == GLFW_KEY_D && action == GLFW_RELEASE)
+		{
+			camera.d = false;
 		}
 	}
 
@@ -108,8 +152,8 @@ public:
 
 		if (action == GLFW_PRESS)
 		{
-			 glfwGetCursorPos(window, &posX, &posY);
-			 cout << "Pos X " << posX <<  " Pos Y " << posY << endl;
+			glfwGetCursorPos(window, &posX, &posY);
+			cout << "Pos X " << posX << " Pos Y " << posY << endl;
 		}
 	}
 
@@ -118,34 +162,39 @@ public:
 		glViewport(0, 0, width, height);
 	}
 
-	void init(const std::string& resourceDirectory)
+	void init(const std::string &resourceDirectory)
 	{
 		GLSL::checkVersion();
 
 		// Set background color.
-		glClearColor(.12f, .34f, .56f, 1.0f);
+		glClearColor(0, 0, 0, 1);
 		// Enable z-buffer test.
 		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
 
-        // create the Instance of ShaderManager which will initialize all shaders in its constructor
+		// create the Instance of ShaderManager which will initialize all shaders in its constructor
 		shaderManager = new ShaderManager(resourceDirectory);
 	}
 
-	void loadMultiPartObject(const std::string& resource, vector<shared_ptr<Shape>>* object)
+	void loadMultiPartObject(const std::string &resource, vector<shared_ptr<Shape>> *object)
 	{
 		// Initialize mesh
 		// Load geometry
- 		// Some obj files contain material information.We'll ignore them for this assignment.
- 		vector<tinyobj::shape_t> TOshapes;
- 		vector<tinyobj::material_t> objMaterials;
- 		string errStr;
+		// Some obj files contain material information.We'll ignore them for this assignment.
+		vector<tinyobj::shape_t> TOshapes;
+		vector<tinyobj::material_t> objMaterials;
+		string errStr;
 		shared_ptr<Shape> s;
 		//load in the mesh and make the shape(s)
- 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resource).c_str());
-		if (!rc) {
+		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resource).c_str());
+		if (!rc)
+		{
 			cerr << errStr << endl;
-		} else {
-			for(int i = 0; i < TOshapes.size(); i++)
+		}
+		else
+		{
+			for (int i = 0; i < TOshapes.size(); i++)
 			{
 				s = make_shared<Shape>();
 				s->createShape(TOshapes[i]);
@@ -156,26 +205,71 @@ public:
 		}
 	}
 
-	void drawMultiPartObject(vector<shared_ptr<Shape>>* object, shared_ptr<Program>* program)
+	void drawMultiPartObject(vector<shared_ptr<Shape>> *object, shared_ptr<Program> *program)
 	{
-		for(int i = 0; i < object->size(); i++) 
+		for (int i = 0; i < object->size(); i++)
 			(*object)[i]->draw(*program);
 	}
 
-	void initGeom(const std::string& resourceDirectory)
+	void initVPLBuffer()
+	{
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+
+		// choose the smaller of width/height and defined resolution to create VPL size
+		width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
+		height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
+
+		//initialize the buffers -- from learnopengl.com
+		glGenFramebuffers(1, &VPLbuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, VPLbuffer);
+
+		// - position color buffer
+		glGenTextures(1, &VPLpositions);
+		glBindTexture(GL_TEXTURE_2D, VPLpositions);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions, 0);
+
+		// - color buffer
+		glGenTextures(1, &VPLcolors);
+		glBindTexture(GL_TEXTURE_2D, VPLcolors);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors, 0);
+	
+		glGenRenderbuffers(1, &depthBuf);
+		//set up depth necessary as rendering a mesh that needs depth test
+		glBindRenderbuffer(GL_RENDERBUFFER, depthBuf);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuf);
+
+		//more FBO set up
+		GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+		glDrawBuffers(2, DrawBuffers);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	void initGeom(const std::string &resourceDirectory)
 	{
 		//EXAMPLE new set up to read one shape from one obj file - convert to read several
 		// Initialize mesh
 		// Load geometry
- 		// Some obj files contain material information.We'll ignore them for this assignment.
- 		vector<tinyobj::shape_t> TOshapes;
- 		vector<tinyobj::material_t> objMaterials;
- 		string errStr;
+		// Some obj files contain material information.We'll ignore them for this assignment.
+		vector<tinyobj::shape_t> TOshapes;
+		vector<tinyobj::material_t> objMaterials;
+		string errStr;
 		//load in the mesh and make the shape(s)
- 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/bunny.obj").c_str());
-		if (!rc) {
+		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/bunny.obj").c_str());
+		if (!rc)
+		{
 			cerr << errStr << endl;
-		} else {
+		}
+		else
+		{
 			bunny = make_shared<Shape>();
 			bunny->createShape(TOshapes[0]);
 			bunny->measure();
@@ -187,9 +281,12 @@ public:
 		gMin.y = bunny->min.y;
 
 		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/cube.obj").c_str());
-		if (!rc) {
+		if (!rc)
+		{
 			cerr << errStr << endl;
-		} else {
+		}
+		else
+		{
 			cube = make_shared<Shape>();
 			cube->createShape(TOshapes[0]);
 			cube->measure();
@@ -199,106 +296,218 @@ public:
 		//then do something with that information.....
 		gMin.x = cube->min.x;
 		gMin.y = cube->min.y;
-	
-	
 	}
-    
-    mat4 SetProjectionMatrix(shared_ptr<Program> curShader) {
-        int width, height;
-        glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
-        float aspect = width/(float)height;
-        mat4 Projection = perspective(radians(50.0f), aspect, 0.1f, 100.0f);
-        glUniformMatrix4fv(curShader->getUniform("P"), 1, GL_FALSE, value_ptr(Projection));
-        return Projection;
-    }
-    
-    void SetViewMatrix(shared_ptr<Program> curShader, vec3 lookat) {
-        auto View = make_shared<MatrixStack>();
-        View->pushMatrix();
-		View->lookAt(vec3(0), lookat, vec3(0,1,0));
-        glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-        View->popMatrix();
-    }
+
+	mat4 SetProjectionMatrix(shared_ptr<Program> curShader)
+	{
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+		float aspect = width / (float)height;
+		mat4 Projection = perspective(radians(50.0f), aspect, 0.1f, 100.0f);
+		glUniformMatrix4fv(curShader->getUniform("P"), 1, GL_FALSE, value_ptr(Projection));
+		return Projection;
+	}
+
+	void SetViewMatrix(shared_ptr<Program> curShader, vec3 position, vec3 lookat)
+	{
+		auto View = make_shared<MatrixStack>();
+		View->pushMatrix();
+		View->lookAt(position, lookat, vec3(0, 1, 0));
+		glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		View->popMatrix();
+	}
 
 	void render(float frametime)
 	{
-		// Get current frame buffer size.
+		VPLpass(frametime);
+		RenderPass(frametime);
+	}
+
+	void VPLpass(float frametime)
+	{
+
+		glBindFramebuffer(GL_FRAMEBUFFER, VPLbuffer);
+
+		// choose the smaller of width/height and defined resolution to create VPL size
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+		width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
+		height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
+		glViewport(0, 0, VPLRESOLUTION, VPLRESOLUTION);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		vec3 lightPos = vec3(0, -3, 0);
+		vec3 bunnyPos = vec3(4, -6, -4);
+		shaderManager->setCurrentShader(VPLPROG);
+		shared_ptr<Program> VPLshader = shaderManager->getCurrentShader();
+
+		auto Model = make_shared<MatrixStack>();
+
+		VPLshader->bind();
+		// Apply perspective projection.
+		SetProjectionMatrix(VPLshader);
+		SetViewMatrix(VPLshader, lightPos, bunnyPos);
+
+		glUniform3f(VPLshader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
+
+		// draw mesh
+		Model->pushMatrix();
+		Model->loadIdentity();
+		//"global" translate
+		Model->translate(bunnyPos);
+		// draw bunny
+		Model->pushMatrix();
+		Model->scale(vec3(2));
+		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(VPLshader->getUniform("baseColor"), bunnyBaseColor.x, bunnyBaseColor.y, bunnyBaseColor.z);
+		bunny->draw(VPLshader);
+		Model->popMatrix();
+
+		// draw cubes around the bunny
+		Model->pushMatrix();
+		Model->translate(vec3(0, -2, 0));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(VPLshader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, 2, -4));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(VPLshader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(4, 2, 0));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(VPLshader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, -2, -4));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(VPLshader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(4, -2, 0));
+		Model->scale(vec3(4));
+		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		cube->draw(VPLshader);
+		Model->popMatrix();
+
+		Model->popMatrix();
+
+		VPLshader->unbind();
+	}
+
+	void RenderPass(float frametime)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);		
+		
+		// resize
 		int width, height;
 		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
 		glViewport(0, 0, width, height);
-
+		int vplres = width > VPLRESOLUTION ? VPLRESOLUTION : width;
+		vplres = height > VPLRESOLUTION ? VPLRESOLUTION : height;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        
-        shaderManager->setCurrentShader(SIMPLEPROG);
-        renderSimpleProg(frametime);
-        
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, VPLpositions);
+		glActiveTexture(GL_TEXTURE0+1);
+		glBindTexture(GL_TEXTURE_2D, VPLcolors);
+
+		vec3 lightPos = vec3(0, -3, 0);
+		vec3 bunnyPos = vec3(4, -6, -4);
+		shaderManager->setCurrentShader(RENDERPROG);
+		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
+
+		auto Model = make_shared<MatrixStack>();
+
+		renderShader->bind();		
+		
+		// get the resolution of the vpl buffer so we know how many lights to 
+		// loop through
+		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
+		// Apply perspective projection.
+		SetProjectionMatrix(renderShader);
+		SetViewMatrix(renderShader, vec3(0), bunnyPos);
+
+		// draw mesh
+		Model->pushMatrix();
+		Model->loadIdentity();
+		//"global" translate
+		Model->translate(bunnyPos);
+		// draw bunny
+		Model->pushMatrix();
+		Model->scale(vec3(2));
+		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(renderShader->getUniform("baseColor"), bunnyBaseColor.x, bunnyBaseColor.y, bunnyBaseColor.z);
+		bunny->draw(renderShader);
+		Model->popMatrix();
+
+		// draw cubes around the bunny
+		Model->pushMatrix();
+		Model->translate(vec3(0, -2, 0));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(renderShader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, 2, -4));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(renderShader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(4, 2, 0));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(renderShader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, -2, -4));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(renderShader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(4, -2, 0));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(renderShader);
+		Model->popMatrix();
+
+		Model->popMatrix();
+
+		if (FirstTime)
+		{
+			assert(GLTextureWriter::WriteImage(VPLbuffer, "vplBuf.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions, "vplPos.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors, "vplColors.png"));
+			FirstTime = false;
+		}
+
+		renderShader->unbind();
 	}
-    
-    void renderSimpleProg(float frametime) {
-
-		vec3 bunnyPos = vec3(4,-6,-4);
-        shared_ptr<Program> simple = shaderManager->getCurrentShader();
-
-        auto Model = make_shared<MatrixStack>();
-
-        simple->bind();
-            // Apply perspective projection.
-            SetProjectionMatrix(simple);
-            SetViewMatrix(simple, bunnyPos);
-
-            // draw mesh
-            Model->pushMatrix();
-            Model->loadIdentity();
-            //"global" translate
-            Model->translate(bunnyPos);
-				// draw bunny
-                Model->pushMatrix();
-                Model->scale(vec3(2));
-                glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                bunny->draw(simple);
-                Model->popMatrix();
-				
-				// draw cubes around the bunny
-				Model->pushMatrix();
-				Model->translate(vec3(0,-2,0));	
-				Model->scale(vec3(4));
-				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                cube->draw(simple);
-				Model->popMatrix();				
-				
-				Model->pushMatrix();
-				Model->translate(vec3(0,2,-4));	
-				Model->scale(vec3(4));
-				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                cube->draw(simple);
-				Model->popMatrix();
-
-				Model->pushMatrix();
-				Model->translate(vec3(4,2,0));				
-				Model->scale(vec3(4));
-				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                cube->draw(simple);
-				Model->popMatrix();
-
-				Model->pushMatrix();
-				Model->translate(vec3(0,-2,-4));	
-				Model->scale(vec3(4));
-				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                cube->draw(simple);
-				Model->popMatrix();
-
-				Model->pushMatrix();
-				Model->translate(vec3(4,-2,0));				
-				Model->scale(vec3(4));
-				glUniformMatrix4fv(simple->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-                cube->draw(simple);
-				Model->popMatrix();
-
-
-
-            Model->popMatrix();
-        simple->unbind();
-    }
 };
 
 int main(int argc, char *argv[])
@@ -326,12 +535,13 @@ int main(int argc, char *argv[])
 
 	application->init(resourceDir);
 	application->initGeom(resourceDir);
+	application->initVPLBuffer();
 
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-	while (! glfwWindowShouldClose(windowManager->getHandle()))
-	{
+//	while (!glfwWindowShouldClose(windowManager->getHandle()))
+//	{
 
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
@@ -355,7 +565,7 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-	}
+//	}
 
 	// Quit program.
 	windowManager->shutdown();

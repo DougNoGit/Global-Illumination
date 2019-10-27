@@ -23,6 +23,7 @@ public:
     bool zoomIn;
     bool zoomOut;
     bool inAnimation;
+    bool w,a,s,d;
     float t;
     float targetYaw; 
     float yawAngle;
@@ -35,6 +36,7 @@ public:
 
     Camera()
     {
+        w = a = s = d = false;
         controlDir = -1;
         targetYaw = yawAngle = 0.0;
         targetDistance = distance = 5.0;
