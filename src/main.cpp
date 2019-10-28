@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is. 
  ***********************/
 
-#define VPLRESOLUTION 256
+#define VPLRESOLUTION 64
 
 #include <chrono>
 #include <iostream>
@@ -540,8 +540,8 @@ int main(int argc, char *argv[])
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-//	while (!glfwWindowShouldClose(windowManager->getHandle()))
-//	{
+	while (!glfwWindowShouldClose(windowManager->getHandle()))
+	{
 
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
@@ -565,7 +565,7 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-//	}
+	}
 
 	// Quit program.
 	windowManager->shutdown();

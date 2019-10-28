@@ -20,7 +20,7 @@ void main()
 	//diffuseScalar = (dot(normal, normalize(vec3(0,-3,0) - fragPos)) + 0.5);
 	//color = vec4(diffuseScalar * vec3(1.0/distance(vec3(0,-3,0), fragPos)), 1);
 
-	// light based on VPLs
+	 //light based on VPLs
 	for(int i = 0; i < VPLresolution; i++)
 	{
 		for(int j = 0; j < VPLresolution; j++)
@@ -30,8 +30,8 @@ void main()
 			currentVPLColor = texture(VPLcolors, texCoords);
 	
 			distanceScalar = 0.1 / (distance(fragPos, currentVPLPos.xyz));
-			diffuseScalar = dot(normalize(currentVPLPos.xyz - fragPos), normal);
-			color += currentVPLPos;
+			diffuseScalar = clamp(dot(normalize(currentVPLPos.xyz - fragPos), normal), 0, 1);
+			color += currentVPLColor * distanceScalar * diffuseScalar;
 		}
 	}
 }
