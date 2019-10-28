@@ -78,9 +78,12 @@ public:
 
 	// Shape to be used (from  file) - modify to support multiple
 	shared_ptr<Shape> bunny;
-	vec3 bunnyBaseColor = vec3(1,0.5,0.5);
+	vec3 bunnyBaseColor = vec3(1,0,0);
 	shared_ptr<Shape> cube;
-	vec3 cubeBaseColor = vec3(1,1,1);
+	vec3 cubeBaseColor = vec3(0,0,1);
+	vec3 lightPos = vec3(0, 0, 0);
+	vec3 camPos = vec3(0,0,0);
+	vec3 bunnyPos = vec3(4, -6, -4);
 
 	// Two part path
 	Spline splinepath[2];
@@ -336,8 +339,6 @@ public:
 		glViewport(0, 0, VPLRESOLUTION, VPLRESOLUTION);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		vec3 lightPos = vec3(0, -3, 0);
-		vec3 bunnyPos = vec3(4, -6, -4);
 		shaderManager->setCurrentShader(VPLPROG);
 		shared_ptr<Program> VPLshader = shaderManager->getCurrentShader();
 
@@ -426,8 +427,6 @@ public:
 		glActiveTexture(GL_TEXTURE0+1);
 		glBindTexture(GL_TEXTURE_2D, VPLcolors);
 
-		vec3 lightPos = vec3(0, -3, 0);
-		vec3 bunnyPos = vec3(4, -6, -4);
 		shaderManager->setCurrentShader(RENDERPROG);
 		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
 
@@ -440,7 +439,7 @@ public:
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
 		// Apply perspective projection.
 		SetProjectionMatrix(renderShader);
-		SetViewMatrix(renderShader, vec3(0), bunnyPos);
+		SetViewMatrix(renderShader, camPos, bunnyPos);
 
 		// draw mesh
 		Model->pushMatrix();

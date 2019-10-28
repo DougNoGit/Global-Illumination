@@ -26,12 +26,13 @@ void main()
 		for(int j = 0; j < VPLresolution; j++)
 		{
 			texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
-			currentVPLPos = texture(VPLpositions, texCoords);
+			currentVPLPos = (texture(VPLpositions, texCoords) - vec4(0.5)) * 100.0;
 			currentVPLColor = texture(VPLcolors, texCoords);
 	
 			distanceScalar = 0.1 / (distance(fragPos, currentVPLPos.xyz));
 			diffuseScalar = clamp(dot(normalize(currentVPLPos.xyz - fragPos), normal), 0, 1);
-			color += currentVPLColor * distanceScalar * diffuseScalar;
+			color += (currentVPLColor * distanceScalar * diffuseScalar);
 		}
 	}
+	color = color / float(VPLresolution);
 }
