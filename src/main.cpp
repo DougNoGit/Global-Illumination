@@ -554,6 +554,9 @@ int main(int argc, char *argv[])
 		// convert microseconds (weird) to seconds (less weird)
 		deltaTime *= 0.000001;
 
+		// display framerate
+		cout << "FPS: " << 1.0/deltaTime << endl;
+
 		// reset lastTime so that we can calculate the deltaTime
 		// on the next frame
 		lastTime = nextLastTime;

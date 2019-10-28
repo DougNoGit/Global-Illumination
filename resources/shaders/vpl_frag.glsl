@@ -13,6 +13,9 @@ void main()
 	float diffuseCoefficient = clamp(dot(normalize(lightPos - fragPos), normalize(fragNor)), 0, 1);
 	float distanceScalar = 5.0 / distance(lightPos, fragPos);
 
+	vec4 diffuse = vec4(diffuseCoefficient * distanceScalar * baseColor, 1);
+	vec4 ambient = diffuse * 0.8;
+
 	// TODO plz fix
 	VPLpositions = vec4((fragPos/50.0) + vec3(.5,.5,.5), 1);
 	VPLcolors = vec4(diffuseCoefficient * distanceScalar * baseColor, 1);
