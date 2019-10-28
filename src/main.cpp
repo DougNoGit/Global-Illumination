@@ -1,19 +1,19 @@
 /*
  * Program 3 base code - includes modifications to shape and initGeom in preparation to load
- * multi shape objects 
+ * multi shape objects
  * CPE 471 Cal Poly Z. Wood + S. Sueda + I. Dunn
  */
 
 /***********************
  SHADER MANAGER INSTRUCTIONS
- 
+
  HOW TO ADD A SHADER:
  1) Create a #define in ShaderManager.h that will be used to identify your shader
  2) Add an init function in ShaderManager.cpp and put your initialization code there
  - be sure to add a prototype of this function in ShaderManager.h
  3) Call your init function from initShaders in ShaderManager.cpp and save it to the
  respective location in shaderMap. See example
- 
+
  HOW TO USE A SHADER IN THE RENDER LOOP
  1) first, call shaderManager.setCurrentShader(int name) to set the current shader
  2) To retrieve the current shader, call shaderManager.getCurrentShader()
@@ -24,17 +24,17 @@
  SPLINE INSTRUCTIONS
 
  1) Create a spline object, or an array of splines (for a more complex path)
- 2) Initialize the splines. I did this in initGeom in this example. There are 
+ 2) Initialize the splines. I did this in initGeom in this example. There are
 	two constructors for it, for order 2 and order 3 splines. The first uses
-	a beginning, intermediate control point, and ending. In the case of Bezier splines, 
-	the path is influenced by, but does NOT necessarily touch, the control point. 
-	There is a second constructor, for order 3 splines. These have two control points. 
-	Use these to create S-curves. The constructor also takes a duration of time that the 
-	path should take to be completed. This is in seconds. 
- 3) Call update(frametime) with the time between the frames being rendered. 
-	3a) Call isDone() and switch to the next part of the path if you are using multiple 
-	    paths or something like that. 
- 4) Call getPosition() to get the vec3 of where the current calculated position is. 
+	a beginning, intermediate control point, and ending. In the case of Bezier splines,
+	the path is influenced by, but does NOT necessarily touch, the control point.
+	There is a second constructor, for order 3 splines. These have two control points.
+	Use these to create S-curves. The constructor also takes a duration of time that the
+	path should take to be completed. This is in seconds.
+ 3) Call update(frametime) with the time between the frames being rendered.
+	3a) Call isDone() and switch to the next part of the path if you are using multiple
+	    paths or something like that.
+ 4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
 #define VPLRESOLUTION 64
@@ -81,9 +81,9 @@ public:
 	vec3 bunnyBaseColor = vec3(1,0,0);
 	shared_ptr<Shape> cube;
 	vec3 cubeBaseColor = vec3(0,0,1);
-	vec3 lightPos = vec3(0, 0, 0);
+	vec3 lightPos = vec3(0, -3, 0);
 	vec3 camPos = vec3(0,0,0);
-	vec3 bunnyPos = vec3(4, -6, -4);
+	vec3 bunnyPos = vec3(10, -6, -10);
 
 	// Two part path
 	Spline splinepath[2];
@@ -242,7 +242,7 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors, 0);
-	
+
 		glGenRenderbuffers(1, &depthBuf);
 		//set up depth necessary as rendering a mesh that needs depth test
 		glBindRenderbuffer(GL_RENDERBUFFER, depthBuf);
@@ -412,8 +412,8 @@ public:
 
 	void RenderPass(float frametime)
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);		
-		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 		// resize
 		int width, height;
 		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
@@ -432,9 +432,9 @@ public:
 
 		auto Model = make_shared<MatrixStack>();
 
-		renderShader->bind();		
-		
-		// get the resolution of the vpl buffer so we know how many lights to 
+		renderShader->bind();
+
+		// get the resolution of the vpl buffer so we know how many lights to
 		// loop through
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
 		// Apply perspective projection.
@@ -525,7 +525,7 @@ int main(int argc, char *argv[])
 	// and GL context, etc.
 
 	WindowManager *windowManager = new WindowManager();
-	windowManager->init(640, 480);
+	windowManager->init(640, 640);
 	windowManager->setEventCallbacks(application);
 	application->windowManager = windowManager;
 
@@ -539,8 +539,8 @@ int main(int argc, char *argv[])
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-	while (!glfwWindowShouldClose(windowManager->getHandle()))
-	{
+	//while (!glfwWindowShouldClose(windowManager->getHandle()))
+	//{
 
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
@@ -564,8 +564,11 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-	}
+	//}
 
+	while(true) {
+
+	}
 	// Quit program.
 	windowManager->shutdown();
 	return 0;

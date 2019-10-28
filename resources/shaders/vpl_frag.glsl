@@ -11,9 +11,9 @@ uniform vec3 lightPos;
 void main()
 {
 	float diffuseCoefficient = clamp(dot(normalize(lightPos - fragPos), normalize(fragNor)), 0, 1);
-	float distanceScalar = 1.0 / distance(lightPos, fragPos);
+	float distanceScalar = 5.0 / distance(lightPos, fragPos);
 
 	// TODO plz fix
-	VPLpositions = vec4((abs(fragPos/100)) + vec3(.5,.5,.5), 1);
+	VPLpositions = vec4((fragPos/50.0) + vec3(.5,.5,.5), 1);
 	VPLcolors = vec4(diffuseCoefficient * distanceScalar * baseColor, 1);
 }
