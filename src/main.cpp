@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 64
+#define VPLRESOLUTION 32
 
 #include <chrono>
 #include <iostream>
@@ -78,10 +78,10 @@ public:
 
 	// Shape to be used (from  file) - modify to support multiple
 	shared_ptr<Shape> bunny;
-	vec3 bunnyBaseColor = vec3(1,0,0);
+	vec3 bunnyBaseColor = vec3(0,1,1);
 	shared_ptr<Shape> cube;
-	vec3 cubeBaseColor = vec3(0,0,1);
-	vec3 lightPos = vec3(0, -3, 0);
+	vec3 cubeBaseColor = vec3(1,1,1);
+	vec3 lightPos = vec3(0, 0, 0);
 	vec3 camPos = vec3(0,0,0);
 	vec3 bunnyPos = vec3(10, -6, -10);
 
@@ -437,6 +437,8 @@ public:
 		// get the resolution of the vpl buffer so we know how many lights to
 		// loop through
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
+		glUniform1i(renderShader->getUniform("VPLpositions"), 0);
+		glUniform1i(renderShader->getUniform("VPLcolors"), 1);
 		// Apply perspective projection.
 		SetProjectionMatrix(renderShader);
 		SetViewMatrix(renderShader, camPos, bunnyPos);
@@ -539,8 +541,8 @@ int main(int argc, char *argv[])
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-	//while (!glfwWindowShouldClose(windowManager->getHandle()))
-	//{
+	while (!glfwWindowShouldClose(windowManager->getHandle()))
+	{
 
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
@@ -567,12 +569,12 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-	//}
-
-	while(true) {
-
 	}
-	// Quit program.
+
+//	while(true) {
+//
+//	}
+//	// Quit program.
 	windowManager->shutdown();
 	return 0;
 }
