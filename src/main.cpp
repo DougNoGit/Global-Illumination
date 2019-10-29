@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 128
+#define VPLRESOLUTION 8
 
 #include <chrono>
 #include <iostream>
@@ -68,6 +68,8 @@ class Application : public EventCallbacks
 
 public:
 	// for debugging
+	glm::vec3 position;
+
 	bool FirstTime = true;
 
 	// for rendering to png frames
@@ -261,7 +263,6 @@ public:
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuf);
 
-
 		GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
 		glDrawBuffers(1, DrawBuffers);
 
@@ -350,8 +351,8 @@ public:
 	void initGeom(const std::string &resourceDirectory)
 	{
 		// init splines
-		splinepath[0] = Spline(glm::vec3(-6, 0, 0), glm::vec3(-1, -5, 0), glm::vec3(1, 5, 0), glm::vec3(2, 0, 0), 10);
-		splinepath[1] = Spline(glm::vec3(2, 0, 0), glm::vec3(3, -5, 0), glm::vec3(-0.25, 0.25, 0), glm::vec3(0, 0, 0), 10);
+		splinepath[0] = Spline(glm::vec3(-6, 3, 3), glm::vec3(-1, -5, 3), glm::vec3(1, 5, 3), glm::vec3(2, 3, 3), 13);
+		splinepath[1] = Spline(glm::vec3(2, 3, 3), glm::vec3(3, -5, 3), glm::vec3(-3.25, 3.25, 3), glm::vec3(3, 3, 3), 13);
 
 		//EXAMPLE new set up to read one shape from one obj file - convert to read several
 		// Initialize mesh
@@ -436,7 +437,7 @@ public:
 
 	void render(float frametime)
 	{
-		t += 0.5 * frametime;
+		t += frametime;
 		lightPos = vec3(5 * sin(t), 10, 5 * cos(t));
 		VPLpass(frametime);
 		RenderPass(frametime);
@@ -475,7 +476,8 @@ public:
 		Model->translate(bunnyPos);
 		// draw bunny
 		Model->pushMatrix();
-		Model->scale(vec3(2));
+		Model->translate(vec3(sin(24*t)/5, sin(12*t) + 1, 0));
+		Model->scale(vec3(2.5));
 		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(VPLshader->getUniform("baseColor"), bunnyBaseColor.x, bunnyBaseColor.y, bunnyBaseColor.z);
 		bunny->draw(VPLshader);
@@ -576,7 +578,10 @@ public:
 		Model->translate(bunnyPos);
 		// draw bunny
 		Model->pushMatrix();
-		Model->scale(vec3(2));
+		Model->translate(vec3(sin(24*t)/5, sin(12*t) + 1, 0));
+
+		Model->scale(vec3(2.5));
+
 		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(renderShader->getUniform("baseColor"), bunnyBaseColor.x, bunnyBaseColor.y, bunnyBaseColor.z);
 		bunny->draw(renderShader);
@@ -705,7 +710,7 @@ int main(int argc, char *argv[])
 	// and GL context, etc.
 
 	WindowManager *windowManager = new WindowManager();
-	windowManager->init(800, 800);
+	windowManager->init(900, 900);
 	windowManager->setEventCallbacks(application);
 	application->windowManager = windowManager;
 
@@ -722,7 +727,7 @@ int main(int argc, char *argv[])
 	// Loop until the user closes the window.
 	while (!glfwWindowShouldClose(windowManager->getHandle()))
 	{
-
+		//for(int i = 0; i < 180; i++) {
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
 
