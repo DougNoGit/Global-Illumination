@@ -27,6 +27,7 @@ void ShaderManager::initShaders() {
     shaderMap[VPLPROG] = initVPLProgShader();
     shaderMap[RENDERPROG] = initRenderShader();
     shaderMap[LIGHTPROG] = initLightShader();
+    shaderMap[SCREENPROG] = initScreenShader();
 }
 
 shared_ptr<Program> ShaderManager::initVPLProgShader() {
@@ -98,6 +99,25 @@ shared_ptr<Program> ShaderManager::initLightShader() {
     prog->addUniform("M");
     prog->addAttribute("vertPos");
     prog->addAttribute("vertNor");
+    
+    return prog;
+}
+
+
+shared_ptr<Program> ShaderManager::initScreenShader() {
+//    // Initialize the GLSL program.
+    std::shared_ptr<Program> prog = make_shared<Program>();
+    
+    prog->setVerbose(true);
+    prog->setShaderNames(resourceDirectory + "/shaders/screen_vert.glsl", resourceDirectory + "/shaders/screen_frag.glsl");
+    
+    if (!prog->init())
+    {
+        cerr << "One or more shaders failed to compile... exiting!" << endl;
+        exit(1);
+    }
+    
+    prog->addUniform("renderTexture");
     
     return prog;
 }

@@ -6,7 +6,7 @@ uniform vec3 baseColor;
 uniform vec3 lightPos;
 in vec3 fragNor;
 in vec3 fragPos;
-out vec4 color;
+layout(location = 0) out vec4 color;
 
 void main()
 {
@@ -31,8 +31,8 @@ void main()
 			currentVPLColor = texture(VPLcolors, texCoords);
 
 			distanceScalar = clamp(0.25 / (pow(distance(fragPos, currentVPLPos.xyz), 2.5)), 0, 2);
-			diffuseScalar = 1;//clamp(dot(normalize(currentVPLPos.xyz - fragPos), normal) + 0.7,0,1);
-			color += vec4(((0.75*currentVPLColor.xyz + 0.25*baseColor)),1) * diffuseScalar * distanceScalar;
+			diffuseScalar = clamp(dot(normalize(currentVPLPos.xyz - fragPos), normal) + 1,0,1);
+			color += vec4(((0.85*currentVPLColor.xyz + 0.15*baseColor)),1) * diffuseScalar * distanceScalar;
 			
 		}
 	}

@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 64
+#define VPLRESOLUTION 128
 
 #include <chrono>
 #include <iostream>
@@ -70,6 +70,9 @@ public:
 	// for debugging
 	bool FirstTime = true;
 
+	// for rendering to png frames
+	int frameNumber = 0;
+
 	WindowManager *windowManager = nullptr;
 
 	ShaderManager *shaderManager;
@@ -83,7 +86,7 @@ public:
 	shared_ptr<Shape> sphere;
 	vec3 cubeBaseColor = vec3(1, 0, 0);
 	vec3 lightPos = vec3(0);
-	vec3 camPos = vec3(-17,17,17);
+	vec3 camPos = vec3(-17, 17, 17);
 	vec3 bunnyPos = vec3(0);
 
 	float t = 0;
@@ -100,6 +103,14 @@ public:
 	// Set up VPL buffer object
 	GLuint VPLbuffer, depthBuf;
 	GLuint VPLpositions, VPLcolors;
+
+	// Set up render quad geometry
+	GLuint quad_VertexArrayID;
+	GLuint quad_vertexbuffer;
+
+	// Set up render FBO
+	GLuint renderFBO;
+	GLuint renderTexture;
 
 	//example data that might be useful when trying to compute bounds on multi-shape
 	vec3 gMin;
@@ -217,6 +228,80 @@ public:
 			(*object)[i]->draw(*program);
 	}
 
+	void createFBO(GLuint &fb, GLuint &tex)
+	{
+		//initialize FBO (global memory)
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+
+		//set up framebuffer
+		glGenFramebuffers(1, &fb);
+		glBindFramebuffer(GL_FRAMEBUFFER, fb);
+		//set up texture
+		glGenTextures(1, &tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex, 0);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		{
+			cout << "Error setting up frame buffer - exiting" << endl;
+			exit(0);
+		}
+
+		glGenRenderbuffers(1, &depthBuf);
+		//set up depth necessary as rendering a mesh that needs depth test
+		glBindRenderbuffer(GL_RENDERBUFFER, depthBuf);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuf);
+
+
+		GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+		glDrawBuffers(1, DrawBuffers);
+
+		// unbind fb
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
+	/**** geometry set up for a quad *****/
+	void initQuad()
+	{
+		//now set up a simple quad for rendering FBO
+		glGenVertexArrays(1, &quad_VertexArrayID);
+		glBindVertexArray(quad_VertexArrayID);
+
+		static const GLfloat g_quad_vertex_buffer_data[] = {
+			-1.0f,
+			-1.0f,
+			0.0f,
+			1.0f,
+			-1.0f,
+			0.0f,
+			-1.0f,
+			1.0f,
+			0.0f,
+			-1.0f,
+			1.0f,
+			0.0f,
+			1.0f,
+			-1.0f,
+			0.0f,
+			1.0f,
+			1.0f,
+			0.0f,
+		};
+
+		glGenBuffers(1, &quad_vertexbuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW);
+	}
+
 	void initVPLBuffer()
 	{
 		int width, height;
@@ -255,16 +340,19 @@ public:
 		//more FBO set up
 		GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
 		glDrawBuffers(2, DrawBuffers);
+	}
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	void initRenderFBO()
+	{
+		createFBO(renderFBO, renderTexture);
 	}
 
 	void initGeom(const std::string &resourceDirectory)
 	{
 		// init splines
-		splinepath[0] = Spline(glm::vec3(-6,0,0), glm::vec3(-1,-5,0), glm::vec3(1, 5, 0), glm::vec3(2,0,0), 10);
-		splinepath[1] = Spline(glm::vec3(2,0,0), glm::vec3(3,-5,0), glm::vec3(-0.25, 0.25, 0), glm::vec3(0,0,0), 10);
-	
+		splinepath[0] = Spline(glm::vec3(-6, 0, 0), glm::vec3(-1, -5, 0), glm::vec3(1, 5, 0), glm::vec3(2, 0, 0), 10);
+		splinepath[1] = Spline(glm::vec3(2, 0, 0), glm::vec3(3, -5, 0), glm::vec3(-0.25, 0.25, 0), glm::vec3(0, 0, 0), 10);
+
 		//EXAMPLE new set up to read one shape from one obj file - convert to read several
 		// Initialize mesh
 		// Load geometry
@@ -305,8 +393,8 @@ public:
 		//read out information stored in the shape about its size - something like this...
 		//then do something with that information.....
 		gMin.x = cube->min.x;
-		gMin.y = cube->min.y;		
-		
+		gMin.y = cube->min.y;
+
 		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/SmoothSphere.obj").c_str());
 		if (!rc)
 		{
@@ -323,6 +411,8 @@ public:
 		//then do something with that information.....
 		gMin.x = sphere->min.x;
 		gMin.y = sphere->min.y;
+
+		initQuad();
 	}
 
 	mat4 SetProjectionMatrix(shared_ptr<Program> curShader)
@@ -346,21 +436,11 @@ public:
 
 	void render(float frametime)
 	{
-		t += 0.05 * frametime;
-		lightPos = vec3(5*sin(t), 10, 5*cos(t));
+		t += 0.5 * frametime;
+		lightPos = vec3(5 * sin(t), 10, 5 * cos(t));
 		VPLpass(frametime);
 		RenderPass(frametime);
-		// Demo of Bezier Spline
-		//if (!splinepath[0].isDone())
-		//{
-		//	splinepath[0].update(frametime);
-		//	lightPos = splinepath[0].getPosition();
-		//}
-		//else
-		//{
-		//	splinepath[1].update(frametime);
-		//	lightPos = splinepath[1].getPosition();
-		//}
+		ScreenPass();
 	}
 
 	void VPLpass(float frametime)
@@ -406,7 +486,7 @@ public:
 		Model->translate(vec3(0, -2, 0));
 		Model->scale(vec3(4));
 		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		glUniform3f(VPLshader->getUniform("baseColor"), 1, 1, 1);
 		cube->draw(VPLshader);
 		Model->popMatrix();
 
@@ -457,7 +537,7 @@ public:
 
 	void RenderPass(float frametime)
 	{
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, renderFBO);
 
 		// resize
 		int width, height;
@@ -507,7 +587,7 @@ public:
 		Model->translate(vec3(0, -2, 0));
 		Model->scale(vec3(4));
 		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		glUniform3f(renderShader->getUniform("baseColor"), 1, 1, 1);
 		cube->draw(renderShader);
 		Model->popMatrix();
 
@@ -576,6 +656,37 @@ public:
 		sphere->draw(lightShader);
 		lightShader->unbind();
 	}
+
+	void ScreenPass()
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+		shaderManager->setCurrentShader(SCREENPROG);
+		shared_ptr<Program> screenProg = shaderManager->getCurrentShader();
+		screenProg->bind();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, renderTexture);
+
+		char outFileName[50];
+		sprintf(outFileName, "frames/%020d.png", frameNumber);
+		//assert(GLTextureWriter::WriteImage(renderTexture, outFileName));
+		frameNumber++;
+
+		// resize
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+		glViewport(0, 0, width, height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glUniform1i(screenProg->getUniform("renderTexture"), 0);
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDisableVertexAttribArray(0);
+
+		screenProg->unbind();
+	}
 };
 
 int main(int argc, char *argv[])
@@ -594,7 +705,7 @@ int main(int argc, char *argv[])
 	// and GL context, etc.
 
 	WindowManager *windowManager = new WindowManager();
-	windowManager->init(640, 640);
+	windowManager->init(800, 800);
 	windowManager->setEventCallbacks(application);
 	application->windowManager = windowManager;
 
@@ -604,6 +715,7 @@ int main(int argc, char *argv[])
 	application->init(resourceDir);
 	application->initGeom(resourceDir);
 	application->initVPLBuffer();
+	application->initRenderFBO();
 
 	auto lastTime = chrono::high_resolution_clock::now();
 
