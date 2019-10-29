@@ -26,6 +26,7 @@
 void ShaderManager::initShaders() {
     shaderMap[VPLPROG] = initVPLProgShader();
     shaderMap[RENDERPROG] = initRenderShader();
+    shaderMap[LIGHTPROG] = initLightShader();
 }
 
 shared_ptr<Program> ShaderManager::initVPLProgShader() {
@@ -71,7 +72,30 @@ shared_ptr<Program> ShaderManager::initRenderShader() {
     prog->addUniform("VPLpositions");
     prog->addUniform("VPLcolors");
     prog->addUniform("VPLresolution");
+    prog->addUniform("lightPos");
     prog->addUniform("baseColor");
+    prog->addAttribute("vertPos");
+    prog->addAttribute("vertNor");
+    
+    return prog;
+}
+
+shared_ptr<Program> ShaderManager::initLightShader() {
+//    // Initialize the GLSL program.
+    std::shared_ptr<Program> prog = make_shared<Program>();
+    
+    prog->setVerbose(true);
+    prog->setShaderNames(resourceDirectory + "/shaders/light_vert.glsl", resourceDirectory + "/shaders/light_frag.glsl");
+    
+    if (!prog->init())
+    {
+        cerr << "One or more shaders failed to compile... exiting!" << endl;
+        exit(1);
+    }
+    
+    prog->addUniform("P");
+    prog->addUniform("V");
+    prog->addUniform("M");
     prog->addAttribute("vertPos");
     prog->addAttribute("vertNor");
     

@@ -78,12 +78,15 @@ public:
 
 	// Shape to be used (from  file) - modify to support multiple
 	shared_ptr<Shape> bunny;
-	vec3 bunnyBaseColor = vec3(0,0,1);
+	vec3 bunnyBaseColor = vec3(0, 0, 1);
 	shared_ptr<Shape> cube;
-	vec3 cubeBaseColor = vec3(1,0,0);
+	shared_ptr<Shape> sphere;
+	vec3 cubeBaseColor = vec3(1, 0, 0);
 	vec3 lightPos = vec3(0);
-	vec3 camPos = vec3(0,0,0);
-	vec3 bunnyPos = vec3(10, -6, -10);
+	vec3 camPos = vec3(-17,17,17);
+	vec3 bunnyPos = vec3(0);
+
+	float t = 0;
 
 	// Two part path
 	Spline splinepath[2];
@@ -258,6 +261,10 @@ public:
 
 	void initGeom(const std::string &resourceDirectory)
 	{
+		// init splines
+		splinepath[0] = Spline(glm::vec3(-6,0,0), glm::vec3(-1,-5,0), glm::vec3(1, 5, 0), glm::vec3(2,0,0), 10);
+		splinepath[1] = Spline(glm::vec3(2,0,0), glm::vec3(3,-5,0), glm::vec3(-0.25, 0.25, 0), glm::vec3(0,0,0), 10);
+	
 		//EXAMPLE new set up to read one shape from one obj file - convert to read several
 		// Initialize mesh
 		// Load geometry
@@ -298,7 +305,24 @@ public:
 		//read out information stored in the shape about its size - something like this...
 		//then do something with that information.....
 		gMin.x = cube->min.x;
-		gMin.y = cube->min.y;
+		gMin.y = cube->min.y;		
+		
+		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/models/SmoothSphere.obj").c_str());
+		if (!rc)
+		{
+			cerr << errStr << endl;
+		}
+		else
+		{
+			sphere = make_shared<Shape>();
+			sphere->createShape(TOshapes[0]);
+			sphere->measure();
+			sphere->init();
+		}
+		//read out information stored in the shape about its size - something like this...
+		//then do something with that information.....
+		gMin.x = sphere->min.x;
+		gMin.y = sphere->min.y;
 	}
 
 	mat4 SetProjectionMatrix(shared_ptr<Program> curShader)
@@ -322,8 +346,21 @@ public:
 
 	void render(float frametime)
 	{
+		t += 0.05 * frametime;
+		lightPos = vec3(5*sin(t), 10, 5*cos(t));
 		VPLpass(frametime);
 		RenderPass(frametime);
+		// Demo of Bezier Spline
+		//if (!splinepath[0].isDone())
+		//{
+		//	splinepath[0].update(frametime);
+		//	lightPos = splinepath[0].getPosition();
+		//}
+		//else
+		//{
+		//	splinepath[1].update(frametime);
+		//	lightPos = splinepath[1].getPosition();
+		//}
 	}
 
 	void VPLpass(float frametime)
@@ -405,6 +442,14 @@ public:
 		cube->draw(VPLshader);
 		Model->popMatrix();
 
+		Model->pushMatrix();
+		Model->translate(vec3(0, -10, 0));
+		Model->scale(vec3(16));
+		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		cube->draw(VPLshader);
+		Model->popMatrix();
+
 		Model->popMatrix();
 
 		VPLshader->unbind();
@@ -424,7 +469,7 @@ public:
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, VPLpositions);
-		glActiveTexture(GL_TEXTURE0+1);
+		glActiveTexture(GL_TEXTURE0 + 1);
 		glBindTexture(GL_TEXTURE_2D, VPLcolors);
 
 		shaderManager->setCurrentShader(RENDERPROG);
@@ -439,6 +484,7 @@ public:
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
 		glUniform1i(renderShader->getUniform("VPLpositions"), 0);
 		glUniform1i(renderShader->getUniform("VPLcolors"), 1);
+		glUniform3f(renderShader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
 		// Apply perspective projection.
 		SetProjectionMatrix(renderShader);
 		SetViewMatrix(renderShader, camPos, bunnyPos);
@@ -497,6 +543,14 @@ public:
 		cube->draw(renderShader);
 		Model->popMatrix();
 
+		Model->pushMatrix();
+		Model->translate(vec3(0, -10, 0));
+		Model->scale(vec3(16));
+		glUniform3f(renderShader->getUniform("baseColor"), 0, 1, 0);
+		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		cube->draw(renderShader);
+		Model->popMatrix();
+
 		Model->popMatrix();
 
 		if (FirstTime)
@@ -508,6 +562,19 @@ public:
 		}
 
 		renderShader->unbind();
+
+		shaderManager->setCurrentShader(LIGHTPROG);
+		shared_ptr<Program> lightShader = shaderManager->getCurrentShader();
+		lightShader->bind();
+		// Apply perspective projection.
+		SetProjectionMatrix(lightShader);
+		SetViewMatrix(lightShader, camPos, bunnyPos);
+		Model->loadIdentity();
+		Model->translate(lightPos);
+		Model->scale(0.1);
+		glUniformMatrix4fv(lightShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		sphere->draw(lightShader);
+		lightShader->unbind();
 	}
 };
 
@@ -557,7 +624,7 @@ int main(int argc, char *argv[])
 		deltaTime *= 0.000001;
 
 		// display framerate
-		cout << "FPS: " << 1.0/deltaTime << endl;
+		cout << "FPS: " << 1.0 / deltaTime << endl;
 
 		// reset lastTime so that we can calculate the deltaTime
 		// on the next frame
@@ -571,10 +638,10 @@ int main(int argc, char *argv[])
 		glfwPollEvents();
 	}
 
-//	while(true) {
-//
-//	}
-//	// Quit program.
+	//	while(true) {
+	//
+	//	}
+	//	// Quit program.
 	windowManager->shutdown();
 	return 0;
 }

@@ -3,6 +3,7 @@ uniform sampler2D VPLpositions;
 uniform sampler2D VPLcolors;
 uniform int VPLresolution;
 uniform vec3 baseColor;
+uniform vec3 lightPos;
 in vec3 fragNor;
 in vec3 fragPos;
 out vec4 color;
@@ -29,14 +30,14 @@ void main()
 			currentVPLPos = (texture(VPLpositions, texCoords) - vec4(0.5)) * 50.0;
 			currentVPLColor = texture(VPLcolors, texCoords);
 
-			distanceScalar = clamp(1 / (pow(distance(fragPos, currentVPLPos.xyz), 3)), 0, 1);
+			distanceScalar = clamp(0.25 / (pow(distance(fragPos, currentVPLPos.xyz), 2.5)), 0, 2);
 			diffuseScalar = 1;//clamp(dot(normalize(currentVPLPos.xyz - fragPos), normal) + 0.7,0,1);
-			color += currentVPLColor * diffuseScalar * distanceScalar;
+			color += vec4(((0.75*currentVPLColor.xyz + 0.25*baseColor)),1) * diffuseScalar * distanceScalar;
 			
 		}
 	}
-	color = 50*(color / pow(float(VPLresolution),2));
+	color = 60*(color / pow(float(VPLresolution),2));
 	//vec4 ambient = color * 0.5;
 	//color += ambient;
-	color += 0.25 * vec4(baseColor * clamp(dot(normalize(vec3(0,-3,0) - fragPos), normal),0,1),1);
+	//color += 0.15 * vec4(baseColor * clamp(dot(normalize(lightPos - fragPos), normal),0,1),1);
 }
