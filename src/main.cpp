@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 32
+#define VPLRESOLUTION 64
 
 #include <chrono>
 #include <iostream>
@@ -78,10 +78,10 @@ public:
 
 	// Shape to be used (from  file) - modify to support multiple
 	shared_ptr<Shape> bunny;
-	vec3 bunnyBaseColor = vec3(0,1,1);
+	vec3 bunnyBaseColor = vec3(0,0,1);
 	shared_ptr<Shape> cube;
-	vec3 cubeBaseColor = vec3(1,1,1);
-	vec3 lightPos = vec3(0, 0, 0);
+	vec3 cubeBaseColor = vec3(1,0,0);
+	vec3 lightPos = vec3(0);
 	vec3 camPos = vec3(0,0,0);
 	vec3 bunnyPos = vec3(10, -6, -10);
 
