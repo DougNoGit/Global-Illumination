@@ -85,8 +85,8 @@ public:
 	shared_ptr<Shape> cube;
 	shared_ptr<Shape> sphere;
 	vec3 cubeBaseColor = vec3(1, 0, 0);
-	vec3 lightPos = vec3(0);
-	vec3 camPos = vec3(-17, 17, 17);
+	vec3 lightPos = vec3(0.1,5,0.1);
+	vec3 camPos = vec3(0, 0, -17);
 	vec3 bunnyPos = vec3(0);
 
 	float t = 0;
@@ -415,6 +415,16 @@ public:
 		initQuad();
 	}
 
+	mat4 SetLightProjectionMatrix(shared_ptr<Program> curShader)
+	{
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+		float aspect = width / (float)height;
+		mat4 Projection = perspective(radians(140.0f), aspect, 0.1f, 100.0f);
+		glUniformMatrix4fv(curShader->getUniform("P"), 1, GL_FALSE, value_ptr(Projection));
+		return Projection;
+	}
+
 	mat4 SetProjectionMatrix(shared_ptr<Program> curShader)
 	{
 		int width, height;
@@ -434,10 +444,147 @@ public:
 		View->popMatrix();
 	}
 
+	void drawSceneObjectsOriginal(float frametime, shared_ptr<Program> shader)
+	{
+		auto Model = make_shared<MatrixStack>();
+
+		// draw mesh
+		Model->pushMatrix();
+		Model->loadIdentity();
+		//"global" translate
+		Model->translate(bunnyPos);
+		// draw bunny
+		Model->pushMatrix();
+		Model->scale(vec3(2));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), bunnyBaseColor.x, bunnyBaseColor.y, bunnyBaseColor.z);
+		bunny->draw(shader);
+		Model->popMatrix();
+
+		// draw cubes around the bunny
+		Model->pushMatrix();
+		Model->translate(vec3(0, -2, 0));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, 2, -4));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(4, 2, 0));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, -2, -4));
+		Model->scale(vec3(4));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(4, -2, 0));
+		Model->scale(vec3(4));
+		glUniform3f(shader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, -10, 0));
+		Model->scale(vec3(16));
+		glUniform3f(shader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->popMatrix();
+	}
+
+	void drawSceneObjectsCornellBox(float frametime, shared_ptr<Program> shader)
+	{
+		auto Model = make_shared<MatrixStack>();
+
+		// draw mesh
+		Model->pushMatrix();
+		Model->loadIdentity();
+		//"global" translate
+		Model->translate(bunnyPos);
+		// draw bunny
+		Model->pushMatrix();
+		Model->scale(vec3(2));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
+		bunny->draw(shader);
+		Model->popMatrix();
+
+		// draw cubes around the bunny
+		Model->pushMatrix();
+		Model->translate(vec3(0, -10, 0));
+		Model->scale(vec3(5,10,5));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(-5, 0, 0));
+		Model->scale(vec3(5,10,5));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 1, 0, 0);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(5, 0, 0));
+		Model->scale(vec3(5,10,5));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 0, 1, 0);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->pushMatrix();
+		Model->translate(vec3(0, 0, 5));
+		Model->scale(vec3(5,10,5));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
+		cube->draw(shader);
+		Model->popMatrix();
+
+		Model->popMatrix();
+	}
+
+	void drawLightObject()
+	{
+		auto Model = make_shared<MatrixStack>();
+		shaderManager->setCurrentShader(LIGHTPROG);
+		shared_ptr<Program> lightShader = shaderManager->getCurrentShader();
+		lightShader->bind();
+		// Apply perspective projection.
+		SetProjectionMatrix(lightShader);
+		SetViewMatrix(lightShader, camPos, bunnyPos);
+		Model->loadIdentity();
+		Model->translate(lightPos);
+		Model->scale(0.1);
+		glUniformMatrix4fv(lightShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		sphere->draw(lightShader);
+		lightShader->unbind();
+	}
+
 	void render(float frametime)
 	{
-		t += 0.5 * frametime;
-		lightPos = vec3(5 * sin(t), 10, 5 * cos(t));
 		VPLpass(frametime);
 		RenderPass(frametime);
 		ScreenPass();
@@ -459,78 +606,13 @@ public:
 		shaderManager->setCurrentShader(VPLPROG);
 		shared_ptr<Program> VPLshader = shaderManager->getCurrentShader();
 
-		auto Model = make_shared<MatrixStack>();
-
 		VPLshader->bind();
 		// Apply perspective projection.
-		SetProjectionMatrix(VPLshader);
+		SetLightProjectionMatrix(VPLshader);
 		SetViewMatrix(VPLshader, lightPos, bunnyPos);
-
 		glUniform3f(VPLshader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
 
-		// draw mesh
-		Model->pushMatrix();
-		Model->loadIdentity();
-		//"global" translate
-		Model->translate(bunnyPos);
-		// draw bunny
-		Model->pushMatrix();
-		Model->scale(vec3(2));
-		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(VPLshader->getUniform("baseColor"), bunnyBaseColor.x, bunnyBaseColor.y, bunnyBaseColor.z);
-		bunny->draw(VPLshader);
-		Model->popMatrix();
-
-		// draw cubes around the bunny
-		Model->pushMatrix();
-		Model->translate(vec3(0, -2, 0));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(VPLshader->getUniform("baseColor"), 1, 1, 1);
-		cube->draw(VPLshader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(0, 2, -4));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		cube->draw(VPLshader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(4, 2, 0));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		cube->draw(VPLshader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(0, -2, -4));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		cube->draw(VPLshader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(4, -2, 0));
-		Model->scale(vec3(4));
-		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		cube->draw(VPLshader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(0, -10, 0));
-		Model->scale(vec3(16));
-		glUniform3f(VPLshader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		glUniformMatrix4fv(VPLshader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		cube->draw(VPLshader);
-		Model->popMatrix();
-
-		Model->popMatrix();
+		drawSceneObjectsCornellBox(frametime, VPLshader);
 
 		VPLshader->unbind();
 	}
@@ -555,8 +637,6 @@ public:
 		shaderManager->setCurrentShader(RENDERPROG);
 		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
 
-		auto Model = make_shared<MatrixStack>();
-
 		renderShader->bind();
 
 		// get the resolution of the vpl buffer so we know how many lights to
@@ -569,69 +649,7 @@ public:
 		SetProjectionMatrix(renderShader);
 		SetViewMatrix(renderShader, camPos, bunnyPos);
 
-		// draw mesh
-		Model->pushMatrix();
-		Model->loadIdentity();
-		//"global" translate
-		Model->translate(bunnyPos);
-		// draw bunny
-		Model->pushMatrix();
-		Model->scale(vec3(2));
-		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(renderShader->getUniform("baseColor"), bunnyBaseColor.x, bunnyBaseColor.y, bunnyBaseColor.z);
-		bunny->draw(renderShader);
-		Model->popMatrix();
-
-		// draw cubes around the bunny
-		Model->pushMatrix();
-		Model->translate(vec3(0, -2, 0));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(renderShader->getUniform("baseColor"), 1, 1, 1);
-		cube->draw(renderShader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(0, 2, -4));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		cube->draw(renderShader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(4, 2, 0));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		cube->draw(renderShader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(0, -2, -4));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		cube->draw(renderShader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(4, -2, 0));
-		Model->scale(vec3(4));
-		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(renderShader->getUniform("baseColor"), cubeBaseColor.x, cubeBaseColor.y, cubeBaseColor.z);
-		cube->draw(renderShader);
-		Model->popMatrix();
-
-		Model->pushMatrix();
-		Model->translate(vec3(0, -10, 0));
-		Model->scale(vec3(16));
-		glUniform3f(renderShader->getUniform("baseColor"), 0, 1, 0);
-		glUniformMatrix4fv(renderShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		cube->draw(renderShader);
-		Model->popMatrix();
-
-		Model->popMatrix();
+		drawSceneObjectsCornellBox(frametime, renderShader);
 
 		if (FirstTime)
 		{
@@ -643,18 +661,7 @@ public:
 
 		renderShader->unbind();
 
-		shaderManager->setCurrentShader(LIGHTPROG);
-		shared_ptr<Program> lightShader = shaderManager->getCurrentShader();
-		lightShader->bind();
-		// Apply perspective projection.
-		SetProjectionMatrix(lightShader);
-		SetViewMatrix(lightShader, camPos, bunnyPos);
-		Model->loadIdentity();
-		Model->translate(lightPos);
-		Model->scale(0.1);
-		glUniformMatrix4fv(lightShader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		sphere->draw(lightShader);
-		lightShader->unbind();
+		drawLightObject();
 	}
 
 	void ScreenPass()

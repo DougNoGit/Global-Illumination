@@ -30,14 +30,12 @@ void main()
 			currentVPLPos = (texture(VPLpositions, texCoords) - vec4(0.5)) * 50.0;
 			currentVPLColor = texture(VPLcolors, texCoords);
 
-			distanceScalar = clamp(0.25 / (pow(distance(fragPos, currentVPLPos.xyz), 2.5)), 0, 2);
-			diffuseScalar = clamp(dot(normalize(currentVPLPos.xyz - fragPos), normal) + 1,0,1);
-			color += vec4(((0.85*currentVPLColor.xyz + 0.15*baseColor)),1) * diffuseScalar * distanceScalar;
+			distanceScalar = clamp(0.15 / (pow(distance(fragPos, currentVPLPos.xyz), 2)), 0, 1.5);
+			diffuseScalar = 1;//clamp(dot(normalize(currentVPLPos.xyz - fragPos), normal) + 1,0,1);
+			color += vec4(((0.9*currentVPLColor.xyz + 0.10*baseColor)),1) * diffuseScalar * distanceScalar;
 			
 		}
 	}
 	color = 60*(color / pow(float(VPLresolution),2));
-	//vec4 ambient = color * 0.5;
-	//color += ambient;
-	//color += 0.15 * vec4(baseColor * clamp(dot(normalize(lightPos - fragPos), normal),0,1),1);
+	color += 0.15 * vec4(baseColor * clamp(dot(normalize(lightPos - fragPos), normal),0,1),1);
 }
