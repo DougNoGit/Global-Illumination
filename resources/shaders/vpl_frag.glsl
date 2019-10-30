@@ -11,7 +11,7 @@ uniform vec3 lightPos;
 void main()
 {
 	float diffuseCoefficient = clamp(dot(normalize(lightPos - fragPos), normalize(fragNor)), 0, 1);
-	float distanceScalar = 5.0 / distance(lightPos, fragPos);
+	float distanceScalar = 5.0 * clamp((1 / distance(lightPos, fragPos)), 0, 1);
 
 	vec4 diffuse = vec4(diffuseCoefficient * distanceScalar * baseColor, 1);
 	vec4 ambient = diffuse * 0.8;

@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 128
+#define VPLRESOLUTION 64
 
 #include <chrono>
 #include <iostream>
@@ -85,9 +85,9 @@ public:
 	shared_ptr<Shape> cube;
 	shared_ptr<Shape> sphere;
 	vec3 cubeBaseColor = vec3(1, 0, 0);
-	vec3 lightPos = vec3(0.1,5,0.1);
+	vec3 lightPos = vec3(0,7,0.1);
 	vec3 camPos = vec3(0, 0, -17);
-	vec3 bunnyPos = vec3(0);
+	vec3 bunnyPos = vec3(0,-2,0);
 
 	float t = 0;
 
@@ -420,7 +420,7 @@ public:
 		int width, height;
 		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
 		float aspect = width / (float)height;
-		mat4 Projection = perspective(radians(140.0f), aspect, 0.1f, 100.0f);
+		mat4 Projection = perspective(radians(90.0f), aspect, 0.1f, 100.0f);
 		glUniformMatrix4fv(curShader->getUniform("P"), 1, GL_FALSE, value_ptr(Projection));
 		return Projection;
 	}
@@ -521,10 +521,10 @@ public:
 		Model->pushMatrix();
 		Model->loadIdentity();
 		//"global" translate
-		Model->translate(bunnyPos);
 		// draw bunny
-		Model->pushMatrix();
-		Model->scale(vec3(2));
+		Model->pushMatrix();	
+		Model->translate(bunnyPos);
+		Model->scale(vec3(2.5));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
 		bunny->draw(shader);
@@ -533,31 +533,49 @@ public:
 		// draw cubes around the bunny
 		Model->pushMatrix();
 		Model->translate(vec3(0, -10, 0));
-		Model->scale(vec3(5,10,5));
+		Model->scale(vec3(10,14,10));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
+		cube->draw(shader);
+		Model->popMatrix();		
+		
+		Model->pushMatrix();
+		Model->translate(vec3(-3, -2, 0));
+		Model->rotate(radians(45.0), vec3(0,1,0));
+		Model->scale(vec3(2));
+		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
+		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
+		cube->draw(shader);
+		Model->popMatrix();		
+		
+		Model->pushMatrix();
+		Model->translate(vec3(3, -2, 0));
+		Model->rotate(radians(45.0), vec3(0,1,0));
+		Model->scale(vec3(2));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
 		cube->draw(shader);
 		Model->popMatrix();
 
 		Model->pushMatrix();
-		Model->translate(vec3(-5, 0, 0));
-		Model->scale(vec3(5,10,5));
+		Model->translate(vec3(-10, 0, 0));
+		Model->scale(vec3(10,14,10));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 0, 0);
 		cube->draw(shader);
 		Model->popMatrix();
 
 		Model->pushMatrix();
-		Model->translate(vec3(5, 0, 0));
-		Model->scale(vec3(5,10,5));
+		Model->translate(vec3(10, 0, 0));
+		Model->scale(vec3(10,14,10));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 0, 1, 0);
 		cube->draw(shader);
 		Model->popMatrix();
 
 		Model->pushMatrix();
-		Model->translate(vec3(0, 0, 5));
-		Model->scale(vec3(5,10,5));
+		Model->translate(vec3(0, 0, 10));
+		Model->scale(vec3(10,14,10));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
 		cube->draw(shader);
