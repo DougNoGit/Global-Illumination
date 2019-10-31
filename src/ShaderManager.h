@@ -32,8 +32,10 @@
 
 #include "Program.h"
 
-#define SIMPLEPROG 0
-#define SIMPLEPROG2 1
+#define VPLPROG 0
+#define RENDERPROG 1
+#define LIGHTPROG 2
+#define SCREENPROG 3
 
 #include <memory>
 
@@ -53,7 +55,10 @@ public:
     ~ShaderManager();
     
     void initShaders();
-    shared_ptr<Program> initSimpleProgShader();
+    shared_ptr<Program> initVPLProgShader();
+    shared_ptr<Program> initRenderShader();
+    shared_ptr<Program> initLightShader();
+    shared_ptr<Program> initScreenShader();
     
     shared_ptr<Program> getCurrentShader() { return currentShader; }
     void setCurrentShader(int shader) { currentShader = shaderMap[shader]; }
