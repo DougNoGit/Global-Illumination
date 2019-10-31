@@ -38,6 +38,7 @@
  ***********************/
 
 #define VPLRESOLUTION 16
+#define LOOPS 2
 
 #include <chrono>
 #include <iostream>
@@ -313,35 +314,39 @@ public:
 		width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
 		height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
 
-		//initialize the buffers -- from learnopengl.com
-		glGenFramebuffers(1, &(VPLBuffer[0]));
-        glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[0]);
+        for(int i = 0; i < LOOPS; i++) {
+            //initialize the buffers -- from learnopengl.com
+            glGenFramebuffers(1, &(VPLBuffer[i]));
+            glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[i]);
 
-		// - position color buffer
-		glGenTextures(1, &VPLpositions[0]);
-		glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions[0], 0);
+            // - position color buffer
+            glGenTextures(1, &VPLpositions[i]);
+            glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions[i], 0);
 
-		// - color buffer
-		glGenTextures(1, &VPLcolors[0]);
-		glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors[0], 0);
+            // - color buffer
+            glGenTextures(1, &VPLcolors[i]);
+            glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors[i], 0);
 
-		glGenRenderbuffers(1, &depthBuf);
-		//set up depth necessary as rendering a mesh that needs depth test
-		glBindRenderbuffer(GL_RENDERBUFFER, depthBuf);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuf);
+            glGenRenderbuffers(1, &VPLdepthBuf[i]);
+            //set up depth necessary as rendering a mesh that needs depth test
+            glBindRenderbuffer(GL_RENDERBUFFER, VPLdepthBuf[i]);
+            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, VPLdepthBuf[i]);
 
-		//more FBO set up
-		GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-		glDrawBuffers(2, DrawBuffers);
+            //more FBO set up
+            GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+            glDrawBuffers(2, DrawBuffers);
+            
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
 	}
 
 	void initRenderFBO()
@@ -445,6 +450,15 @@ public:
 		glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
 		View->popMatrix();
 	}
+    
+    void SetLightViewMatrix(shared_ptr<Program> curShader, vec3 position, vec3 direction, vec3 up)
+    {
+        auto View = make_shared<MatrixStack>();
+        View->pushMatrix();
+        View->lookAt(position, position + direction, up);
+        glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+        View->popMatrix();
+    }
 
 	void drawSceneObjectsOriginal(float frametime, shared_ptr<Program> shader)
 	{
@@ -613,28 +627,41 @@ public:
 	void VPLpass(float frametime)
 	{
 
-		glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[0]);
+        vec3 directions[6] = {
+            vec3(0,-1,0),
+            vec3(-1,0,0),
+            vec3(0,0,-1),
+            vec3(0,1,0),
+            vec3(1,0,0),
+            vec3(0,0,1)
+        };
+        
+        for(int i = 0; i < LOOPS; i++) {
+            
+            glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[i]);
 
-		// choose the smaller of width/height and defined resolution to create VPL size
-		int width, height;
-		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
-		width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
-		height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
-		glViewport(0, 0, VPLRESOLUTION, VPLRESOLUTION);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            // choose the smaller of width/height and defined resolution to create VPL size
+            int width, height;
+            glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+            width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
+            height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
+            glViewport(0, 0, VPLRESOLUTION, VPLRESOLUTION);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shaderManager->setCurrentShader(VPLPROG);
-		shared_ptr<Program> VPLshader = shaderManager->getCurrentShader();
+            shaderManager->setCurrentShader(VPLPROG);
+            shared_ptr<Program> VPLshader = shaderManager->getCurrentShader();
 
-		VPLshader->bind();
-		// Apply perspective projection.
-		SetLightProjectionMatrix(VPLshader);
-		SetViewMatrix(VPLshader, lightPos, bunnyPos);
-		glUniform3f(VPLshader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
+            VPLshader->bind();
+            // Apply perspective projection.
+            SetLightProjectionMatrix(VPLshader);
+            SetLightViewMatrix(VPLshader, lightPos, directions[i], directions[(i+1)%6]);
+            glUniform3f(VPLshader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
 
-		drawSceneObjectsCornellBox(frametime, VPLshader);
+            drawSceneObjectsCornellBox(frametime, VPLshader);
 
-		VPLshader->unbind();
+            VPLshader->unbind();
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        }
 	}
 
 	void RenderPass(float frametime)
@@ -649,10 +676,20 @@ public:
 		vplres = height > VPLRESOLUTION ? VPLRESOLUTION : height;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
-		glActiveTexture(GL_TEXTURE0 + 1);
-		glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
+//        for (int i = 0; i < LOOPS; i++) {
+//            glActiveTexture(GL_TEXTURE0 + (i));
+//            glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
+//            glActiveTexture(GL_TEXTURE0 + (i + 2));
+//            glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
+//        }
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, VPLpositions[1]);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, VPLcolors[1]);
 
 		shaderManager->setCurrentShader(RENDERPROG);
 		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
@@ -662,8 +699,11 @@ public:
 		// get the resolution of the vpl buffer so we know how many lights to
 		// loop through
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
-		glUniform1i(renderShader->getUniform("VPLpositions"), 0);
-		glUniform1i(renderShader->getUniform("VPLcolors"), 1);
+		glUniform1i(renderShader->getUniform("VPLpositions1"), 0);
+        glUniform1i(renderShader->getUniform("VPLpositions2"), 1);
+        // TODO: Is this right?
+		glUniform1i(renderShader->getUniform("VPLcolors1"), 2);
+        glUniform1i(renderShader->getUniform("VPLcolors2"), 3);
 		glUniform3f(renderShader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
 		// Apply perspective projection.
 		SetProjectionMatrix(renderShader);
@@ -673,9 +713,12 @@ public:
 
 		if (FirstTime)
 		{
-			assert(GLTextureWriter::WriteImage(VPLBuffer[0], "vplBuf.png"));
-			assert(GLTextureWriter::WriteImage(VPLpositions[0], "vplPos.png"));
-			assert(GLTextureWriter::WriteImage(VPLcolors[0], "vplColors.png"));
+			assert(GLTextureWriter::WriteImage(VPLBuffer[0], "vplBuf0.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[0], "vplPos0.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[0], "vplColors0.png"));
+            assert(GLTextureWriter::WriteImage(VPLBuffer[1], "vplBuf1.png"));
+            assert(GLTextureWriter::WriteImage(VPLpositions[1], "vplPos1.png"));
+            assert(GLTextureWriter::WriteImage(VPLcolors[1], "vplColors1.png"));
 			FirstTime = false;
 		}
 
