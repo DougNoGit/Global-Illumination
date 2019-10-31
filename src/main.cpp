@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 64
+#define VPLRESOLUTION 16
 
 #include <chrono>
 #include <iostream>
@@ -101,8 +101,10 @@ public:
 	GLuint VertexBufferID;
 
 	// Set up VPL buffer object
-	GLuint VPLbuffer, depthBuf;
-	GLuint VPLpositions, VPLcolors;
+	GLuint depthBuf;
+	
+    GLuint VPLBuffer[6], VPLdepthBuf[6];
+    GLuint VPLpositions[6], VPLcolors[6];
 
 	// Set up render quad geometry
 	GLuint quad_VertexArrayID;
@@ -312,24 +314,24 @@ public:
 		height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
 
 		//initialize the buffers -- from learnopengl.com
-		glGenFramebuffers(1, &VPLbuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, VPLbuffer);
+		glGenFramebuffers(1, &(VPLBuffer[0]));
+        glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[0]);
 
 		// - position color buffer
-		glGenTextures(1, &VPLpositions);
-		glBindTexture(GL_TEXTURE_2D, VPLpositions);
+		glGenTextures(1, &VPLpositions[0]);
+		glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions[0], 0);
 
 		// - color buffer
-		glGenTextures(1, &VPLcolors);
-		glBindTexture(GL_TEXTURE_2D, VPLcolors);
+		glGenTextures(1, &VPLcolors[0]);
+		glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors[0], 0);
 
 		glGenRenderbuffers(1, &depthBuf);
 		//set up depth necessary as rendering a mesh that needs depth test
@@ -611,7 +613,7 @@ public:
 	void VPLpass(float frametime)
 	{
 
-		glBindFramebuffer(GL_FRAMEBUFFER, VPLbuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[0]);
 
 		// choose the smaller of width/height and defined resolution to create VPL size
 		int width, height;
@@ -648,9 +650,9 @@ public:
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, VPLpositions);
+		glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
 		glActiveTexture(GL_TEXTURE0 + 1);
-		glBindTexture(GL_TEXTURE_2D, VPLcolors);
+		glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
 
 		shaderManager->setCurrentShader(RENDERPROG);
 		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
@@ -671,9 +673,9 @@ public:
 
 		if (FirstTime)
 		{
-			assert(GLTextureWriter::WriteImage(VPLbuffer, "vplBuf.png"));
-			assert(GLTextureWriter::WriteImage(VPLpositions, "vplPos.png"));
-			assert(GLTextureWriter::WriteImage(VPLcolors, "vplColors.png"));
+			assert(GLTextureWriter::WriteImage(VPLBuffer[0], "vplBuf.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[0], "vplPos.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[0], "vplColors.png"));
 			FirstTime = false;
 		}
 
@@ -717,7 +719,7 @@ public:
 int main(int argc, char *argv[])
 {
 	// Where the resources are loaded from
-	std::string resourceDir = "../resources";
+	std::string resourceDir = "../../resources";
 
 	if (argc >= 2)
 	{
