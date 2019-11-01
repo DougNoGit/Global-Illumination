@@ -38,7 +38,7 @@
  ***********************/
 
 #define VPLRESOLUTION 16
-#define LOOPS 2
+#define LOOPS 6
 
 #include <chrono>
 #include <iostream>
@@ -676,20 +676,22 @@ public:
 		vplres = height > VPLRESOLUTION ? VPLRESOLUTION : height;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-//        for (int i = 0; i < LOOPS; i++) {
-//            glActiveTexture(GL_TEXTURE0 + (i));
-//            glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
-//            glActiveTexture(GL_TEXTURE0 + (i + 2));
-//            glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
-//        }
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, VPLpositions[1]);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, VPLcolors[1]);
+        for (int i = 0; i < LOOPS; i++) {
+            glActiveTexture(GL_TEXTURE0 + i);
+            glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
+            glActiveTexture(GL_TEXTURE0 + i + 6);
+            glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
+        }
+        
+//        glActiveTexture(GL_TEXTURE0);
+//        glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
+//        glActiveTexture(GL_TEXTURE1);
+//        glBindTexture(GL_TEXTURE_2D, VPLpositions[1]);
+//        glActiveTexture(GL_TEXTURE2);
+//        glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
+//        glActiveTexture(GL_TEXTURE3);
+//        glBindTexture(GL_TEXTURE_2D, VPLcolors[1]);
+        
 
 		shaderManager->setCurrentShader(RENDERPROG);
 		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
@@ -701,9 +703,17 @@ public:
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
 		glUniform1i(renderShader->getUniform("VPLpositions1"), 0);
         glUniform1i(renderShader->getUniform("VPLpositions2"), 1);
+        glUniform1i(renderShader->getUniform("VPLpositions3"), 2);
+        glUniform1i(renderShader->getUniform("VPLpositions4"), 3);
+        glUniform1i(renderShader->getUniform("VPLpositions5"), 4);
+        glUniform1i(renderShader->getUniform("VPLpositions6"), 5);
         // TODO: Is this right?
-		glUniform1i(renderShader->getUniform("VPLcolors1"), 2);
-        glUniform1i(renderShader->getUniform("VPLcolors2"), 3);
+		glUniform1i(renderShader->getUniform("VPLcolors1"), 6);
+        glUniform1i(renderShader->getUniform("VPLcolors2"), 7);
+        glUniform1i(renderShader->getUniform("VPLcolors3"), 8);
+        glUniform1i(renderShader->getUniform("VPLcolors4"), 9);
+        glUniform1i(renderShader->getUniform("VPLcolors5"), 10);
+        glUniform1i(renderShader->getUniform("VPLcolors6"), 11);
 		glUniform3f(renderShader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
 		// Apply perspective projection.
 		SetProjectionMatrix(renderShader);
@@ -711,16 +721,28 @@ public:
 
 		drawSceneObjectsCornellBox(frametime, renderShader);
 
-		if (FirstTime)
-		{
-			assert(GLTextureWriter::WriteImage(VPLBuffer[0], "vplBuf0.png"));
-			assert(GLTextureWriter::WriteImage(VPLpositions[0], "vplPos0.png"));
-			assert(GLTextureWriter::WriteImage(VPLcolors[0], "vplColors0.png"));
+        if (FirstTime)
+        {
+            assert(GLTextureWriter::WriteImage(VPLBuffer[0], "vplBuf0.png"));
+            assert(GLTextureWriter::WriteImage(VPLpositions[0], "vplPos0.png"));
+            assert(GLTextureWriter::WriteImage(VPLcolors[0], "vplColors0.png"));
             assert(GLTextureWriter::WriteImage(VPLBuffer[1], "vplBuf1.png"));
             assert(GLTextureWriter::WriteImage(VPLpositions[1], "vplPos1.png"));
             assert(GLTextureWriter::WriteImage(VPLcolors[1], "vplColors1.png"));
-			FirstTime = false;
-		}
+            assert(GLTextureWriter::WriteImage(VPLBuffer[2], "vplBuf2.png"));
+            assert(GLTextureWriter::WriteImage(VPLpositions[2], "vplPos2.png"));
+            assert(GLTextureWriter::WriteImage(VPLcolors[2], "vplColors2.png"));
+            assert(GLTextureWriter::WriteImage(VPLBuffer[3], "vplBuf3.png"));
+            assert(GLTextureWriter::WriteImage(VPLpositions[3], "vplPos3.png"));
+            assert(GLTextureWriter::WriteImage(VPLcolors[3], "vplColors3.png"));
+            assert(GLTextureWriter::WriteImage(VPLBuffer[4], "vplBuf4.png"));
+            assert(GLTextureWriter::WriteImage(VPLpositions[4], "vplPos4.png"));
+            assert(GLTextureWriter::WriteImage(VPLcolors[4], "vplColors4.png"));
+            assert(GLTextureWriter::WriteImage(VPLBuffer[5], "vplBuf5.png"));
+            assert(GLTextureWriter::WriteImage(VPLpositions[5], "vplPos5.png"));
+            assert(GLTextureWriter::WriteImage(VPLcolors[5], "vplColors5.png"));
+            FirstTime = false;
+        }
 
 		renderShader->unbind();
 
