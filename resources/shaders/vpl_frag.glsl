@@ -17,6 +17,6 @@ void main()
 	vec4 ambient = diffuse * 0.8;
 
 	// TODO plz fix
-	VPLpositions = vec4((fragPos/50.0) + vec3(.5,.5,.5), 1);
+	VPLpositions = vec4(fragPos, 1);
 	VPLcolors = vec4(diffuseCoefficient * distanceScalar * baseColor, 1);
 }

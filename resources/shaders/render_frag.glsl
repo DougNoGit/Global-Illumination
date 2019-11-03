@@ -27,7 +27,7 @@ void main()
 		for(int j = 0; j < VPLresolution; j++)
 		{
 			texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
-			currentVPLPos = (texture(VPLpositions, texCoords) - vec4(0.5)) * 50.0;
+			currentVPLPos = texture(VPLpositions, texCoords);
 			currentVPLColor = texture(VPLcolors, texCoords);
 
 			distanceScalar = clamp(0.25 / (pow(distance(fragPos, currentVPLPos.xyz), 2.5)), 0, 2);
