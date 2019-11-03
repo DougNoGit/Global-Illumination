@@ -36,6 +36,7 @@
 #define RENDERPROG 1
 #define LIGHTPROG 2
 #define SCREENPROG 3
+#define GEOMPROG 4
 
 #include <memory>
 
@@ -59,6 +60,7 @@ public:
     shared_ptr<Program> initRenderShader();
     shared_ptr<Program> initLightShader();
     shared_ptr<Program> initScreenShader();
+    shared_ptr<Program> initGeomShader();
     
     shared_ptr<Program> getCurrentShader() { return currentShader; }
     void setCurrentShader(int shader) { currentShader = shaderMap[shader]; }

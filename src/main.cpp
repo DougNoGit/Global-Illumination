@@ -665,8 +665,41 @@ public:
 	void render(float frametime)
 	{
 		VPLpass(frametime);
+		GeometryPass(frametime);
 		RenderPass(frametime);
 		ScreenPass();
+	}
+
+	void GeometryPass(float frametime)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, geometryBuffer);
+
+		// choose the smaller of width/height and defined resolution to create VPL size
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+		glViewport(0, 0, width, height);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		shaderManager->setCurrentShader(GEOMPROG);
+		shared_ptr<Program> geometryProg = shaderManager->getCurrentShader();
+
+		geometryProg->bind();
+		// Apply perspective projection.
+		SetProjectionMatrix(geometryProg);
+		SetViewMatrix(geometryProg, camPos, bunnyPos);
+		drawSceneObjectsOriginal(frametime, geometryProg);
+
+
+		if (FirstTime)
+		{
+			assert(GLTextureWriter::WriteImage(geometryBuffer, "geometryBuffer.png"));
+			assert(GLTextureWriter::WriteImage(gPositions, "gPositions.png"));
+			assert(GLTextureWriter::WriteImage(gNormals, "gNormals.png"));
+		}
+
+
+		geometryProg->unbind();
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
 
 	void VPLpass(float frametime)
@@ -690,7 +723,7 @@ public:
 			glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
 			width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
 			height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
-			glViewport(0, 0, VPLRESOLUTION, VPLRESOLUTION);
+			glViewport(0, 0, width, height);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 			shaderManager->setCurrentShader(VPLPROG);
@@ -852,14 +885,15 @@ int main(int argc, char *argv[])
 	application->init(resourceDir);
 	application->initGeom(resourceDir);
 	application->initVPLBuffer();
+	application->initGeometryBuffer();
 	application->initRenderFBO();
 
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-	while (!glfwWindowShouldClose(windowManager->getHandle()))
-	{
-
+//	while (!glfwWindowShouldClose(windowManager->getHandle()))
+//	{
+//
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
 
@@ -885,7 +919,7 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-	}
+	//}
 
 	//	while(true) {
 	//
