@@ -109,7 +109,7 @@ public:
 
 	// set up deferred buffer object - referenced LearnOpenGL.org
 	GLuint geometryBuffer;
-	GLuint gNormals, gPositions, gDepth;
+	GLuint gNormals, gPositions, gDepth, baseColors;
 
 	// Set up render quad geometry
 	GLuint quad_VertexArrayID;
@@ -308,6 +308,15 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW);
 	}
 
+	void drawQuad()
+	{
+		glEnableVertexAttribArray(0);
+		glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glDisableVertexAttribArray(0);
+	}
+
 	void initGeometryBuffer()
 	{
 		int width, height;
@@ -333,6 +342,14 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormals, 0);
 
+		// base color buffer
+		glGenTextures(1, &baseColors);
+		glBindTexture(GL_TEXTURE_2D, baseColors);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, baseColors, 0);
+
 		glGenRenderbuffers(1, &gDepth);
 		//set up depth necessary as rendering a mesh that needs depth test
 		glBindRenderbuffer(GL_RENDERBUFFER, gDepth);
@@ -340,8 +357,8 @@ public:
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gDepth);
 
 		//more FBO set up
-		GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-		glDrawBuffers(2, DrawBuffers);
+		GLenum DrawBuffers[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2};
+		glDrawBuffers(3, DrawBuffers);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	}
@@ -687,7 +704,7 @@ public:
 		// Apply perspective projection.
 		SetProjectionMatrix(geometryProg);
 		SetViewMatrix(geometryProg, camPos, bunnyPos);
-		drawSceneObjectsOriginal(frametime, geometryProg);
+		drawSceneObjectsCornellBox(frametime, geometryProg);
 
 
 		if (FirstTime)
@@ -695,6 +712,7 @@ public:
 			assert(GLTextureWriter::WriteImage(geometryBuffer, "geometryBuffer.png"));
 			assert(GLTextureWriter::WriteImage(gPositions, "gPositions.png"));
 			assert(GLTextureWriter::WriteImage(gNormals, "gNormals.png"));
+			assert(GLTextureWriter::WriteImage(baseColors, "baseColors.png"));
 		}
 
 
@@ -735,7 +753,7 @@ public:
 			SetLightViewMatrix(VPLshader, lightPos, directions[i], directions[(i + 1) % 6]);
 			glUniform3f(VPLshader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
 
-			drawSceneObjectsOriginal(frametime, VPLshader);
+			drawSceneObjectsCornellBox(frametime, VPLshader);
 
 			VPLshader->unbind();
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -762,14 +780,13 @@ public:
 			glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
 		}
 
-		//        glActiveTexture(GL_TEXTURE0);
-		//        glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
-		//        glActiveTexture(GL_TEXTURE1);
-		//        glBindTexture(GL_TEXTURE_2D, VPLpositions[1]);
-		//        glActiveTexture(GL_TEXTURE2);
-		//        glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
-		//        glActiveTexture(GL_TEXTURE3);
-		//        glBindTexture(GL_TEXTURE_2D, VPLcolors[1]);
+		glActiveTexture(GL_TEXTURE0 + 12);
+		glBindTexture(GL_TEXTURE_2D, gPositions);		
+		glActiveTexture(GL_TEXTURE0 + 13);
+		glBindTexture(GL_TEXTURE_2D, gNormals);		
+		glActiveTexture(GL_TEXTURE0 + 14);
+		glBindTexture(GL_TEXTURE_2D, baseColors);
+
 
 		shaderManager->setCurrentShader(RENDERPROG);
 		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
@@ -792,12 +809,14 @@ public:
 		glUniform1i(renderShader->getUniform("VPLcolors4"), 9);
 		glUniform1i(renderShader->getUniform("VPLcolors5"), 10);
 		glUniform1i(renderShader->getUniform("VPLcolors6"), 11);
-		glUniform3f(renderShader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
-		// Apply perspective projection.
-		SetProjectionMatrix(renderShader);
-		SetViewMatrix(renderShader, camPos, bunnyPos);
 
-		drawSceneObjectsOriginal(frametime, renderShader);
+		glUniform1i(renderShader->getUniform("gPositions"), 12);
+		glUniform1i(renderShader->getUniform("gNormals"), 13);	
+		glUniform1i(renderShader->getUniform("baseColors"), 14);
+		glUniform3f(renderShader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
+	
+
+		drawQuad();
 
 		if (FirstTime)
 		{
@@ -849,11 +868,7 @@ public:
 		glViewport(0, 0, width, height);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUniform1i(screenProg->getUniform("renderTexture"), 0);
-		glEnableVertexAttribArray(0);
-		glBindBuffer(GL_ARRAY_BUFFER, quad_vertexbuffer);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-		glDrawArrays(GL_TRIANGLES, 0, 6);
-		glDisableVertexAttribArray(0);
+		drawQuad();
 
 		screenProg->unbind();
 	}
@@ -891,9 +906,9 @@ int main(int argc, char *argv[])
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-//	while (!glfwWindowShouldClose(windowManager->getHandle()))
-//	{
-//
+	while (!glfwWindowShouldClose(windowManager->getHandle()))
+	{
+
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
 
@@ -919,7 +934,7 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-	//}
+	}
 
 	//	while(true) {
 	//

@@ -11,11 +11,12 @@ uniform sampler2D VPLpositions5;
 uniform sampler2D VPLcolors5;
 uniform sampler2D VPLpositions6;
 uniform sampler2D VPLcolors6;
+uniform sampler2D gPositions;
+uniform sampler2D gNormals;
+uniform sampler2D baseColors;
 uniform int VPLresolution;
-uniform vec3 baseColor;
 uniform vec3 lightPos;
-in vec3 fragNor;
-in vec3 fragPos;
+in vec2 quadTexCoords;
 layout(location = 0) out vec4 color;
 
 #define VPLdistanceFalloffScalar 0.20
@@ -26,11 +27,17 @@ layout(location = 0) out vec4 color;
 
 void main()
 {
+    vec3 fragNor, fragPos, baseColor;
 	float distanceCoefficient, diffuseCoefficient;
 	vec4 currentVPLPos, currentVPLColor;
 	vec2 texCoords;
 
 	color = vec4(0,0,0,1);
+    // "unpack" the mapping done in geometry_frag of the positions and normals
+    fragPos = (texture(gPositions, quadTexCoords).xyz - vec3(0.5)) * 50.0;
+    fragNor = (texture(gNormals, quadTexCoords).xyz * 2.0) - vec3(1);
+    baseColor = texture(baseColors, quadTexCoords).xyz;
+
 	vec3 normal = normalize(fragNor);
 
 	// loop through all VPL's and "accumulate" light
@@ -38,8 +45,10 @@ void main()
 	{
 		for(int j = 0; j < VPLresolution; j++)
 		{
-            // 1
+          
 			texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
+
+            // 1
 			currentVPLPos = (texture(VPLpositions1, texCoords) - vec4(0.5)) * 50.0;
 			currentVPLColor = texture(VPLcolors1, texCoords);
 
@@ -48,7 +57,6 @@ void main()
 			color += vec4(((VPLcolorScalar*currentVPLColor.xyz + VPLbaseColorScalar*baseColor)),1) * diffuseCoefficient * distanceCoefficient;
             
             // 2
-            texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
             currentVPLPos = (texture(VPLpositions2, texCoords) - vec4(0.5)) * 50.0;
             currentVPLColor = texture(VPLcolors2, texCoords);
             
@@ -57,7 +65,6 @@ void main()
             color += vec4(((VPLcolorScalar*currentVPLColor.xyz + VPLbaseColorScalar*baseColor)),1) * diffuseCoefficient * distanceCoefficient;
             
             // 3
-            texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
             currentVPLPos = (texture(VPLpositions3, texCoords) - vec4(0.5)) * 50.0;
             currentVPLColor = texture(VPLcolors3, texCoords);
             
@@ -66,7 +73,6 @@ void main()
             color += vec4(((VPLcolorScalar*currentVPLColor.xyz + VPLbaseColorScalar*baseColor)),1) * diffuseCoefficient * distanceCoefficient;
             
             // 4
-            texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
             currentVPLPos = (texture(VPLpositions4, texCoords) - vec4(0.5)) * 50.0;
             currentVPLColor = texture(VPLcolors4, texCoords);
             
@@ -75,7 +81,6 @@ void main()
             color += vec4(((VPLcolorScalar*currentVPLColor.xyz + VPLbaseColorScalar*baseColor)),1) * diffuseCoefficient * distanceCoefficient;
             
             // 5
-            texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
             currentVPLPos = (texture(VPLpositions5, texCoords) - vec4(0.5)) * 50.0;
             currentVPLColor = texture(VPLcolors5, texCoords);
             
@@ -84,7 +89,6 @@ void main()
             color += vec4(((VPLcolorScalar*currentVPLColor.xyz + VPLbaseColorScalar*baseColor)),1) * diffuseCoefficient * distanceCoefficient;
             
             // 6
-            texCoords = vec2(float(i)/float(VPLresolution),float(j)/float(VPLresolution));
             currentVPLPos = (texture(VPLpositions6, texCoords) - vec4(0.5)) * 50.0;
             currentVPLColor = texture(VPLcolors6, texCoords);
             

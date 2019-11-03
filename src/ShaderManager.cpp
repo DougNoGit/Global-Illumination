@@ -71,6 +71,7 @@ shared_ptr<Program> ShaderManager::initGeomShader() {
     prog->addUniform("P");
     prog->addUniform("V");
     prog->addUniform("M");
+    prog->addUniform("baseColor");
     prog->addAttribute("vertPos");
     prog->addAttribute("vertNor");
     
@@ -90,9 +91,6 @@ shared_ptr<Program> ShaderManager::initRenderShader() {
         exit(1);
     }
     
-    prog->addUniform("P");
-    prog->addUniform("V");
-    prog->addUniform("M");
     prog->addUniform("VPLpositions1");
     prog->addUniform("VPLcolors1");
     prog->addUniform("VPLpositions2");
@@ -105,9 +103,11 @@ shared_ptr<Program> ShaderManager::initRenderShader() {
     prog->addUniform("VPLcolors5");
     prog->addUniform("VPLpositions6");
     prog->addUniform("VPLcolors6");
+    prog->addUniform("gPositions");
+    prog->addUniform("gNormals");
     prog->addUniform("VPLresolution");
     prog->addUniform("lightPos");
-    prog->addUniform("baseColor");
+    prog->addUniform("baseColors");
     prog->addAttribute("vertPos");
     prog->addAttribute("vertNor");
     
