@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 16
+#define VPLRESOLUTION 64
 #define LOOPS 6
 
 #include <chrono>
@@ -86,9 +86,9 @@ public:
 	shared_ptr<Shape> cube;
 	shared_ptr<Shape> sphere;
 	vec3 cubeBaseColor = vec3(1, 0, 0);
-	vec3 lightPos = vec3(0,7,0.1);
+	vec3 lightPos = vec3(0, 7, 0.1);
 	vec3 camPos = vec3(0, 0, -17);
-	vec3 bunnyPos = vec3(0,-2,0);
+	vec3 bunnyPos = vec3(0, -2, 0);
 
 	float t = 0;
 
@@ -103,9 +103,13 @@ public:
 
 	// Set up VPL buffer object
 	GLuint depthBuf;
-	
-    GLuint VPLBuffer[6], VPLdepthBuf[6];
-    GLuint VPLpositions[6], VPLcolors[6];
+
+	GLuint VPLBuffer[6], VPLdepthBuf[6];
+	GLuint VPLpositions[6], VPLcolors[6];
+
+	// set up deferred buffer object - referenced LearnOpenGL.org
+	GLuint geometryBuffer;
+	GLuint gNormals, gPositions, gDepth;
 
 	// Set up render quad geometry
 	GLuint quad_VertexArrayID;
@@ -264,7 +268,6 @@ public:
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuf);
 
-
 		GLenum DrawBuffers[1] = {GL_COLOR_ATTACHMENT0};
 		glDrawBuffers(1, DrawBuffers);
 
@@ -305,6 +308,44 @@ public:
 		glBufferData(GL_ARRAY_BUFFER, sizeof(g_quad_vertex_buffer_data), g_quad_vertex_buffer_data, GL_STATIC_DRAW);
 	}
 
+	void initGeometryBuffer()
+	{
+		int width, height;
+		glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+
+		//initialize the buffers -- from learnopengl.com
+		glGenFramebuffers(1, &geometryBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, geometryBuffer);
+
+		// - position buffer
+		glGenTextures(1, &gPositions);
+		glBindTexture(GL_TEXTURE_2D, gPositions);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPositions, 0);
+
+		// - normal buffer
+		glGenTextures(1, &gNormals);
+		glBindTexture(GL_TEXTURE_2D, gNormals);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gNormals, 0);
+
+		glGenRenderbuffers(1, &gDepth);
+		//set up depth necessary as rendering a mesh that needs depth test
+		glBindRenderbuffer(GL_RENDERBUFFER, gDepth);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, gDepth);
+
+		//more FBO set up
+		GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+		glDrawBuffers(2, DrawBuffers);
+
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
 	void initVPLBuffer()
 	{
 		int width, height;
@@ -314,39 +355,40 @@ public:
 		width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
 		height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
 
-        for(int i = 0; i < LOOPS; i++) {
-            //initialize the buffers -- from learnopengl.com
-            glGenFramebuffers(1, &(VPLBuffer[i]));
-            glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[i]);
+		for (int i = 0; i < LOOPS; i++)
+		{
+			//initialize the buffers -- from learnopengl.com
+			glGenFramebuffers(1, &(VPLBuffer[i]));
+			glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[i]);
 
-            // - position color buffer
-            glGenTextures(1, &VPLpositions[i]);
-            glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions[i], 0);
+			// - position color buffer
+			glGenTextures(1, &VPLpositions[i]);
+			glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions[i], 0);
 
-            // - color buffer
-            glGenTextures(1, &VPLcolors[i]);
-            glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors[i], 0);
+			// - color buffer
+			glGenTextures(1, &VPLcolors[i]);
+			glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, VPLcolors[i], 0);
 
-            glGenRenderbuffers(1, &VPLdepthBuf[i]);
-            //set up depth necessary as rendering a mesh that needs depth test
-            glBindRenderbuffer(GL_RENDERBUFFER, VPLdepthBuf[i]);
-            glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-            glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, VPLdepthBuf[i]);
+			glGenRenderbuffers(1, &VPLdepthBuf[i]);
+			//set up depth necessary as rendering a mesh that needs depth test
+			glBindRenderbuffer(GL_RENDERBUFFER, VPLdepthBuf[i]);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, VPLdepthBuf[i]);
 
-            //more FBO set up
-            GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-            glDrawBuffers(2, DrawBuffers);
-            
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
+			//more FBO set up
+			GLenum DrawBuffers[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+			glDrawBuffers(2, DrawBuffers);
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
 	}
 
 	void initRenderFBO()
@@ -450,19 +492,22 @@ public:
 		glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
 		View->popMatrix();
 	}
-    
-    void SetLightViewMatrix(shared_ptr<Program> curShader, vec3 position, vec3 direction, vec3 up)
-    {
-        auto View = make_shared<MatrixStack>();
-        View->pushMatrix();
-        View->lookAt(position, position + direction, up);
-        glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-        View->popMatrix();
-    }
+
+	void SetLightViewMatrix(shared_ptr<Program> curShader, vec3 position, vec3 direction, vec3 up)
+	{
+		auto View = make_shared<MatrixStack>();
+		View->pushMatrix();
+		View->lookAt(position, position + direction, up);
+		glUniformMatrix4fv(curShader->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		View->popMatrix();
+	}
 
 	void drawSceneObjectsOriginal(float frametime, shared_ptr<Program> shader)
 	{
 		auto Model = make_shared<MatrixStack>();
+		camPos = vec3(-17, 17, 17);
+		t += 0.25 * frametime;
+		lightPos = vec3(5 * sin(t), 10, 5 * cos(t));
 
 		// draw mesh
 		Model->pushMatrix();
@@ -538,7 +583,7 @@ public:
 		Model->loadIdentity();
 		//"global" translate
 		// draw bunny
-		Model->pushMatrix();	
+		Model->pushMatrix();
 		Model->translate(bunnyPos);
 		Model->scale(vec3(2.5));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
@@ -549,24 +594,24 @@ public:
 		// draw cubes around the bunny
 		Model->pushMatrix();
 		Model->translate(vec3(0, -10, 0));
-		Model->scale(vec3(10,14,10));
+		Model->scale(vec3(10, 14, 10));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
 		cube->draw(shader);
-		Model->popMatrix();		
-		
+		Model->popMatrix();
+
 		Model->pushMatrix();
 		Model->translate(vec3(-3, -2, 0));
-		Model->rotate(radians(45.0), vec3(0,1,0));
+		Model->rotate(radians(45.0), vec3(0, 1, 0));
 		Model->scale(vec3(2));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
 		cube->draw(shader);
-		Model->popMatrix();		
-		
+		Model->popMatrix();
+
 		Model->pushMatrix();
 		Model->translate(vec3(3, -2, 0));
-		Model->rotate(radians(45.0), vec3(0,1,0));
+		Model->rotate(radians(45.0), vec3(0, 1, 0));
 		Model->scale(vec3(2));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
@@ -575,7 +620,7 @@ public:
 
 		Model->pushMatrix();
 		Model->translate(vec3(-10, 0, 0));
-		Model->scale(vec3(10,14,10));
+		Model->scale(vec3(10, 14, 10));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 0, 0);
 		cube->draw(shader);
@@ -583,7 +628,7 @@ public:
 
 		Model->pushMatrix();
 		Model->translate(vec3(10, 0, 0));
-		Model->scale(vec3(10,14,10));
+		Model->scale(vec3(10, 14, 10));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 0, 1, 0);
 		cube->draw(shader);
@@ -591,7 +636,7 @@ public:
 
 		Model->pushMatrix();
 		Model->translate(vec3(0, 0, 10));
-		Model->scale(vec3(10,14,10));
+		Model->scale(vec3(10, 14, 10));
 		glUniformMatrix4fv(shader->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
 		glUniform3f(shader->getUniform("baseColor"), 1, 1, 1);
 		cube->draw(shader);
@@ -627,41 +672,41 @@ public:
 	void VPLpass(float frametime)
 	{
 
-        vec3 directions[6] = {
-            vec3(0,-1,0),
-            vec3(-1,0,0),
-            vec3(0,0,-1),
-            vec3(0,1,0),
-            vec3(1,0,0),
-            vec3(0,0,1)
-        };
-        
-        for(int i = 0; i < LOOPS; i++) {
-            
-            glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[i]);
+		vec3 directions[6] = {
+			vec3(0, -1, 0),
+			vec3(-1, 0, 0),
+			vec3(0, 0, -1),
+			vec3(0, 1, 0),
+			vec3(1, 0, 0),
+			vec3(0, 0, 1)};
 
-            // choose the smaller of width/height and defined resolution to create VPL size
-            int width, height;
-            glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
-            width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
-            height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
-            glViewport(0, 0, VPLRESOLUTION, VPLRESOLUTION);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		for (int i = 0; i < LOOPS; i++)
+		{
 
-            shaderManager->setCurrentShader(VPLPROG);
-            shared_ptr<Program> VPLshader = shaderManager->getCurrentShader();
+			glBindFramebuffer(GL_FRAMEBUFFER, VPLBuffer[i]);
 
-            VPLshader->bind();
-            // Apply perspective projection.
-            SetLightProjectionMatrix(VPLshader);
-            SetLightViewMatrix(VPLshader, lightPos, directions[i], directions[(i+1)%6]);
-            glUniform3f(VPLshader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
+			// choose the smaller of width/height and defined resolution to create VPL size
+			int width, height;
+			glfwGetFramebufferSize(windowManager->getHandle(), &width, &height);
+			width = width > VPLRESOLUTION ? VPLRESOLUTION : width;
+			height = height > VPLRESOLUTION ? VPLRESOLUTION : height;
+			glViewport(0, 0, VPLRESOLUTION, VPLRESOLUTION);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            drawSceneObjectsCornellBox(frametime, VPLshader);
+			shaderManager->setCurrentShader(VPLPROG);
+			shared_ptr<Program> VPLshader = shaderManager->getCurrentShader();
 
-            VPLshader->unbind();
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        }
+			VPLshader->bind();
+			// Apply perspective projection.
+			SetLightProjectionMatrix(VPLshader);
+			SetLightViewMatrix(VPLshader, lightPos, directions[i], directions[(i + 1) % 6]);
+			glUniform3f(VPLshader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
+
+			drawSceneObjectsOriginal(frametime, VPLshader);
+
+			VPLshader->unbind();
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
 	}
 
 	void RenderPass(float frametime)
@@ -676,22 +721,22 @@ public:
 		vplres = height > VPLRESOLUTION ? VPLRESOLUTION : height;
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        for (int i = 0; i < LOOPS; i++) {
-            glActiveTexture(GL_TEXTURE0 + i);
-            glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
-            glActiveTexture(GL_TEXTURE0 + i + 6);
-            glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
-        }
-        
-//        glActiveTexture(GL_TEXTURE0);
-//        glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
-//        glActiveTexture(GL_TEXTURE1);
-//        glBindTexture(GL_TEXTURE_2D, VPLpositions[1]);
-//        glActiveTexture(GL_TEXTURE2);
-//        glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
-//        glActiveTexture(GL_TEXTURE3);
-//        glBindTexture(GL_TEXTURE_2D, VPLcolors[1]);
-        
+		for (int i = 0; i < LOOPS; i++)
+		{
+			glActiveTexture(GL_TEXTURE0 + i);
+			glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
+			glActiveTexture(GL_TEXTURE0 + i + 6);
+			glBindTexture(GL_TEXTURE_2D, VPLcolors[i]);
+		}
+
+		//        glActiveTexture(GL_TEXTURE0);
+		//        glBindTexture(GL_TEXTURE_2D, VPLpositions[0]);
+		//        glActiveTexture(GL_TEXTURE1);
+		//        glBindTexture(GL_TEXTURE_2D, VPLpositions[1]);
+		//        glActiveTexture(GL_TEXTURE2);
+		//        glBindTexture(GL_TEXTURE_2D, VPLcolors[0]);
+		//        glActiveTexture(GL_TEXTURE3);
+		//        glBindTexture(GL_TEXTURE_2D, VPLcolors[1]);
 
 		shaderManager->setCurrentShader(RENDERPROG);
 		shared_ptr<Program> renderShader = shaderManager->getCurrentShader();
@@ -702,47 +747,47 @@ public:
 		// loop through
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
 		glUniform1i(renderShader->getUniform("VPLpositions1"), 0);
-        glUniform1i(renderShader->getUniform("VPLpositions2"), 1);
-        glUniform1i(renderShader->getUniform("VPLpositions3"), 2);
-        glUniform1i(renderShader->getUniform("VPLpositions4"), 3);
-        glUniform1i(renderShader->getUniform("VPLpositions5"), 4);
-        glUniform1i(renderShader->getUniform("VPLpositions6"), 5);
-        // TODO: Is this right?
+		glUniform1i(renderShader->getUniform("VPLpositions2"), 1);
+		glUniform1i(renderShader->getUniform("VPLpositions3"), 2);
+		glUniform1i(renderShader->getUniform("VPLpositions4"), 3);
+		glUniform1i(renderShader->getUniform("VPLpositions5"), 4);
+		glUniform1i(renderShader->getUniform("VPLpositions6"), 5);
+		// TODO: Is this right?
 		glUniform1i(renderShader->getUniform("VPLcolors1"), 6);
-        glUniform1i(renderShader->getUniform("VPLcolors2"), 7);
-        glUniform1i(renderShader->getUniform("VPLcolors3"), 8);
-        glUniform1i(renderShader->getUniform("VPLcolors4"), 9);
-        glUniform1i(renderShader->getUniform("VPLcolors5"), 10);
-        glUniform1i(renderShader->getUniform("VPLcolors6"), 11);
+		glUniform1i(renderShader->getUniform("VPLcolors2"), 7);
+		glUniform1i(renderShader->getUniform("VPLcolors3"), 8);
+		glUniform1i(renderShader->getUniform("VPLcolors4"), 9);
+		glUniform1i(renderShader->getUniform("VPLcolors5"), 10);
+		glUniform1i(renderShader->getUniform("VPLcolors6"), 11);
 		glUniform3f(renderShader->getUniform("lightPos"), lightPos.x, lightPos.y, lightPos.z);
 		// Apply perspective projection.
 		SetProjectionMatrix(renderShader);
 		SetViewMatrix(renderShader, camPos, bunnyPos);
 
-		drawSceneObjectsCornellBox(frametime, renderShader);
+		drawSceneObjectsOriginal(frametime, renderShader);
 
-        if (FirstTime)
-        {
-            assert(GLTextureWriter::WriteImage(VPLBuffer[0], "vplBuf0.png"));
-            assert(GLTextureWriter::WriteImage(VPLpositions[0], "vplPos0.png"));
-            assert(GLTextureWriter::WriteImage(VPLcolors[0], "vplColors0.png"));
-            assert(GLTextureWriter::WriteImage(VPLBuffer[1], "vplBuf1.png"));
-            assert(GLTextureWriter::WriteImage(VPLpositions[1], "vplPos1.png"));
-            assert(GLTextureWriter::WriteImage(VPLcolors[1], "vplColors1.png"));
-            assert(GLTextureWriter::WriteImage(VPLBuffer[2], "vplBuf2.png"));
-            assert(GLTextureWriter::WriteImage(VPLpositions[2], "vplPos2.png"));
-            assert(GLTextureWriter::WriteImage(VPLcolors[2], "vplColors2.png"));
-            assert(GLTextureWriter::WriteImage(VPLBuffer[3], "vplBuf3.png"));
-            assert(GLTextureWriter::WriteImage(VPLpositions[3], "vplPos3.png"));
-            assert(GLTextureWriter::WriteImage(VPLcolors[3], "vplColors3.png"));
-            assert(GLTextureWriter::WriteImage(VPLBuffer[4], "vplBuf4.png"));
-            assert(GLTextureWriter::WriteImage(VPLpositions[4], "vplPos4.png"));
-            assert(GLTextureWriter::WriteImage(VPLcolors[4], "vplColors4.png"));
-            assert(GLTextureWriter::WriteImage(VPLBuffer[5], "vplBuf5.png"));
-            assert(GLTextureWriter::WriteImage(VPLpositions[5], "vplPos5.png"));
-            assert(GLTextureWriter::WriteImage(VPLcolors[5], "vplColors5.png"));
-            FirstTime = false;
-        }
+		if (FirstTime)
+		{
+			assert(GLTextureWriter::WriteImage(VPLBuffer[0], "vplBuf0.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[0], "vplPos0.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[0], "vplColors0.png"));
+			assert(GLTextureWriter::WriteImage(VPLBuffer[1], "vplBuf1.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[1], "vplPos1.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[1], "vplColors1.png"));
+			assert(GLTextureWriter::WriteImage(VPLBuffer[2], "vplBuf2.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[2], "vplPos2.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[2], "vplColors2.png"));
+			assert(GLTextureWriter::WriteImage(VPLBuffer[3], "vplBuf3.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[3], "vplPos3.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[3], "vplColors3.png"));
+			assert(GLTextureWriter::WriteImage(VPLBuffer[4], "vplBuf4.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[4], "vplPos4.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[4], "vplColors4.png"));
+			assert(GLTextureWriter::WriteImage(VPLBuffer[5], "vplBuf5.png"));
+			assert(GLTextureWriter::WriteImage(VPLpositions[5], "vplPos5.png"));
+			assert(GLTextureWriter::WriteImage(VPLcolors[5], "vplColors5.png"));
+			FirstTime = false;
+		}
 
 		renderShader->unbind();
 
@@ -784,7 +829,7 @@ public:
 int main(int argc, char *argv[])
 {
 	// Where the resources are loaded from
-	std::string resourceDir = "../../resources";
+	std::string resourceDir = "../resources";
 
 	if (argc >= 2)
 	{

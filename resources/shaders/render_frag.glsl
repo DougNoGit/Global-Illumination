@@ -19,10 +19,10 @@ in vec3 fragPos;
 layout(location = 0) out vec4 color;
 
 #define VPLdistanceFalloffScalar 0.20
-#define VPLdistanceFalloffExponent 1.5
+#define VPLdistanceFalloffExponent 1.8
 #define VPLintensityScalar 20
-#define VPLbaseColorScalar 0.15
-#define VPLcolorScalar 0.85
+#define VPLbaseColorScalar 0.05
+#define VPLcolorScalar 0.95
 
 void main()
 {
