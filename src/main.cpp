@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 64
+#define VPLRESOLUTION 32
 #define LOOPS 6
 
 #include <chrono>
@@ -329,7 +329,7 @@ public:
 		// - position buffer
 		glGenTextures(1, &gPositions);
 		glBindTexture(GL_TEXTURE_2D, gPositions);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gPositions, 0);
@@ -381,7 +381,7 @@ public:
 			// - position color buffer
 			glGenTextures(1, &VPLpositions[i]);
 			glBindTexture(GL_TEXTURE_2D, VPLpositions[i]);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, VPLpositions[i], 0);
@@ -936,10 +936,6 @@ int main(int argc, char *argv[])
 		glfwPollEvents();
 	}
 
-	//	while(true) {
-	//
-	//	}
-	//	// Quit program.
 	windowManager->shutdown();
 	return 0;
 }

@@ -21,7 +21,7 @@ layout(location = 0) out vec4 color;
 
 #define VPLdistanceFalloffScalar 0.20
 #define VPLdistanceFalloffExponent 1.8
-#define VPLintensityScalar 20
+#define VPLintensityScalar 20.0
 #define VPLbaseColorScalar 0.05
 #define VPLcolorScalar 0.95
 
@@ -34,7 +34,7 @@ void main()
 
 	color = vec4(0,0,0,1);
     // "unpack" the mapping done in geometry_frag of the positions and normals
-    fragPos = (texture(gPositions, quadTexCoords).xyz - vec3(0.5)) * 50.0;
+    fragPos = (texture(gPositions, quadTexCoords).xyz);
     fragNor = (texture(gNormals, quadTexCoords).xyz * 2.0) - vec3(1);
     baseColor = texture(baseColors, quadTexCoords).xyz;
 

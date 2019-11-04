@@ -11,7 +11,7 @@ in vec3 fragNor;
 void main()
 {
     // map down to 0,1 for positions with max value 50 or -50
-    gPositions = vec4((fragPos/50.0) + vec3(0.5),1);
+    gPositions = vec4((fragPos),1);
 
     // map normals down to 0,1 from -1,1
     gNormals = vec4((normalize(fragNor) + vec3(1)) / 2.0,1);
