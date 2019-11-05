@@ -902,8 +902,8 @@ int main(int argc, char *argv[])
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-	//while (!glfwWindowShouldClose(windowManager->getHandle()))
-	//{
+	while (!glfwWindowShouldClose(windowManager->getHandle()))
+	{
 
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
@@ -930,7 +930,7 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-	//}
+	}
 
 	windowManager->shutdown();
 	return 0;
