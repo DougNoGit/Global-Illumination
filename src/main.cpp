@@ -596,7 +596,7 @@ public:
 	{
 		auto Model = make_shared<MatrixStack>();
 		t += 0.25 * frametime;
-		lightPos = vec3(5 * sin(t), 10, 5 * cos(t));
+		lightPos = vec3(2 * sin(t), 3, 2 * cos(t));
 
 		// draw mesh
 		Model->pushMatrix();
