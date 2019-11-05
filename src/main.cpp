@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 128
+#define VPLRESOLUTION 64
 #define LOOPS 6
 
 #include <chrono>
@@ -595,6 +595,8 @@ public:
 	void drawSceneObjectsCornellBox(float frametime, shared_ptr<Program> shader)
 	{
 		auto Model = make_shared<MatrixStack>();
+		t += 0.25 * frametime;
+		lightPos = vec3(5 * sin(t), 10, 5 * cos(t));
 
 		// draw mesh
 		Model->pushMatrix();
@@ -852,7 +854,7 @@ public:
 
 		char outFileName[50];
 		sprintf(outFileName, "frames/%020d.png", frameNumber);
-		assert(GLTextureWriter::WriteImage(renderTexture, outFileName));
+		//assert(GLTextureWriter::WriteImage(renderTexture, outFileName));
 		frameNumber++;
 
 		// resize
@@ -899,8 +901,8 @@ int main(int argc, char *argv[])
 	auto lastTime = chrono::high_resolution_clock::now();
 
 	// Loop until the user closes the window.
-	//while (!glfwWindowShouldClose(windowManager->getHandle()))
-	//{
+	while (!glfwWindowShouldClose(windowManager->getHandle()))
+	{
 
 		// save current time for next frame
 		auto nextLastTime = chrono::high_resolution_clock::now();
@@ -927,7 +929,7 @@ int main(int argc, char *argv[])
 		glfwSwapBuffers(windowManager->getHandle());
 		// Poll for and process events.
 		glfwPollEvents();
-	//}
+	}
 
 	windowManager->shutdown();
 	return 0;
