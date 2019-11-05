@@ -37,7 +37,7 @@
  4) Call getPosition() to get the vec3 of where the current calculated position is.
  ***********************/
 
-#define VPLRESOLUTION 16
+#define VPLRESOLUTION 128
 #define LOOPS 6
 
 #include <chrono>
