@@ -796,19 +796,11 @@ public:
 		// get the resolution of the vpl buffer so we know how many lights to
 		// loop through
 		glUniform1i(renderShader->getUniform("VPLresolution"), vplres);
-		glUniform1i(renderShader->getUniform("VPLpositions1"), 0);
-		glUniform1i(renderShader->getUniform("VPLpositions2"), 1);
-		glUniform1i(renderShader->getUniform("VPLpositions3"), 2);
-		glUniform1i(renderShader->getUniform("VPLpositions4"), 3);
-		glUniform1i(renderShader->getUniform("VPLpositions5"), 4);
-		glUniform1i(renderShader->getUniform("VPLpositions6"), 5);
-		// TODO: Is this right?
-		glUniform1i(renderShader->getUniform("VPLcolors1"), 6);
-		glUniform1i(renderShader->getUniform("VPLcolors2"), 7);
-		glUniform1i(renderShader->getUniform("VPLcolors3"), 8);
-		glUniform1i(renderShader->getUniform("VPLcolors4"), 9);
-		glUniform1i(renderShader->getUniform("VPLcolors5"), 10);
-		glUniform1i(renderShader->getUniform("VPLcolors6"), 11);
+		for(int i = 0; i < 6; i++)
+		{
+			glUniform1i(renderShader->getUniform("VPLpositions[" + to_string(i) + "]"), i);
+			glUniform1i(renderShader->getUniform("VPLcolors[" + to_string(i) + "]"), i+6);
+		}
 
 		glUniform1i(renderShader->getUniform("gPositions"), 12);
 		glUniform1i(renderShader->getUniform("gNormals"), 13);	

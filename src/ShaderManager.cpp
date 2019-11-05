@@ -91,18 +91,12 @@ shared_ptr<Program> ShaderManager::initRenderShader() {
         exit(1);
     }
     
-    prog->addUniform("VPLpositions1");
-    prog->addUniform("VPLcolors1");
-    prog->addUniform("VPLpositions2");
-    prog->addUniform("VPLcolors2");
-    prog->addUniform("VPLpositions3");
-    prog->addUniform("VPLcolors3");
-    prog->addUniform("VPLpositions4");
-    prog->addUniform("VPLcolors4");
-    prog->addUniform("VPLpositions5");
-    prog->addUniform("VPLcolors5");
-    prog->addUniform("VPLpositions6");
-    prog->addUniform("VPLcolors6");
+    for(int i = 0; i < 6; i++) 
+    {
+        prog->addUniform("VPLpositions[" + to_string(i) + "]");
+        prog->addUniform("VPLcolors[" + to_string(i) + "]");
+    }
+
     prog->addUniform("gPositions");
     prog->addUniform("gNormals");
     prog->addUniform("VPLresolution");
