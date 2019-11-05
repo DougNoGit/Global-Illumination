@@ -86,7 +86,7 @@ public:
 	shared_ptr<Shape> cube;
 	shared_ptr<Shape> sphere;
 	vec3 cubeBaseColor = vec3(1, 0, 0);
-	vec3 lightPos = vec3(0, 7, 0.1);
+	vec3 lightPos = vec3(0, 6, 0.1);
 	vec3 camPos = vec3(0, 0, -17);
 	vec3 bunnyPos = vec3(0, -2, 0);
 
